@@ -73,7 +73,8 @@
     <header class="bg-white shadow-md sticky top-0 z-50">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <img src="https://www.keralasahityotsav.com/images/logo.png" alt="Logo" class="h-12 md:h-16" onerror="this.src='https://placehold.co/150x60?text=Sahithyolsav'">
+                <!-- LOGO UPDATE -->
+                <img src="Sahithyolsav (en)_1.png" alt="Sahithyolsav Logo" class="h-12 md:h-16" onerror="this.src='https://placehold.co/150x60?text=Sahithyolsav'">
                 <div>
                     <h1 class="font-ssf text-3xl md:text-4xl text-sahithyolsav leading-none">SSF</h1>
                     <p class="text-xs md:text-sm font-bold tracking-widest text-gray-600">NILAMBUR DIVISION</p>
@@ -139,8 +140,8 @@
             <div>
                 <h3 class="font-bold mb-4">Follow Us</h3>
                 <div class="flex justify-center md:justify-start gap-4">
-                    <a href="https://www.facebook.com/share/1FNVLLXMmw/" class="hover:text-sahithyolsav">FB</a>
-                    <a href="https://www.instagram.com/ssfnilamburdvn?igsh=YmpyNHo3d3Y5dmRi" class="hover:text-sahithyolsav">IG</a>
+                    <a href="https://www.facebook.com/share/1FNVLLXMmw/" class="hover:text-sahithyolsav" target="_blank">FB</a>
+                    <a href="https://www.instagram.com/ssfnilamburdvn?igsh=YmpyNHo3d3Y5dmRi" class="hover:text-sahithyolsav" target="_blank">IG</a>
                 </div>
             </div>
         </div>
@@ -159,6 +160,14 @@
                 <input type="password" id="login-pwd" placeholder="Password" class="w-full border p-3 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
                 <button onclick="handleLogin()" class="w-full bg-sahithyolsav text-white py-3 rounded-lg font-bold hover:bg-orange-600 transition">Enter Portal</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Universal Modal for Admin Forms -->
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl relative overflow-y-auto max-h-[90vh]">
+            <button onclick="closeAdminModal()" class="absolute top-4 right-4 text-gray-400 hover:text-black">&times;</button>
+            <div id="admin-modal-content"></div>
         </div>
     </div>
 
@@ -200,6 +209,9 @@
             const menu = document.getElementById('mobile-menu');
             if (menu) menu.classList.toggle('hidden');
         }
+
+        function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
+        function openAdminModal() { document.getElementById('admin-modal').classList.remove('hidden'); }
 
         // --- VIEWS ---
         function renderHome() {
@@ -331,7 +343,7 @@
             if (data && grid) {
                 grid.innerHTML = data.map(p => `
                     <div onclick="showProgramResult('${p.id}')" class="bg-gray-50 p-4 rounded-xl border-2 hover:border-orange-500 cursor-pointer transition flex justify-between items-center group">
-                        <span class="font-bold text-gray-700">${p.name}</span>
+                        <span class="font-bold text-gray-700">${p.name} <small class="text-gray-400 font-normal">(${p.category})</small></span>
                         <svg class="w-5 h-5 text-sahithyolsav opacity-0 group-hover:opacity-100 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
                     </div>
                 `).join('');
@@ -346,7 +358,6 @@
             const loginId = document.getElementById('login-id').value;
             const pwd = document.getElementById('login-pwd').value;
             
-            // Added requested master login and existing hardcoded admin
             if ((loginId === 'admin' && pwd === 'nilambur123') || (loginId === 'sharafunbr@gmail.com' && pwd === '123456')) {
                 currentUser = { role: 'admin', id: 'admin', login_id: loginId };
                 closeLoginModal(); navigate('admin'); return;
@@ -393,7 +404,7 @@
                 main.innerHTML = `<h2 class="text-2xl font-bold mb-6">Approve Pending Results</h2><div id="admin-results-approval" class="space-y-4"></div>`;
                 fetchAdminResultsApproval();
             } else if (view === 'users') {
-                main.innerHTML = `<h2 class="text-2xl font-bold mb-6">Manage Stage Logins</h2><div id="admin-users-list" class="space-y-4"></div>`;
+                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Manage Stage & Judge Logins</h2><button onclick="showAddUserModal()" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Create New Login</button></div><div id="admin-users-list" class="space-y-4"></div>`;
                 loadAdminUsers();
             }
         }
@@ -403,20 +414,122 @@
             const list = document.getElementById('admin-users-list');
             if (data && list) {
                 list.innerHTML = data.map(u => `
-                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
-                        <span><strong>${u.login_id}</strong> (${u.role}) - ${u.stage_assigned || 'All'}</span>
-                        <button onclick="deleteUser('${u.id}')" class="text-red-500">Delete</button>
+                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-lg">${u.login_id}</span>
+                            <span class="text-xs uppercase tracking-widest text-gray-500 font-bold">${u.role} | ${u.stage_assigned || 'All Stages'}</span>
+                        </div>
+                        <button onclick="deleteUser('${u.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
                     </div>
                 `).join('');
             }
         }
 
+        async function showAddUserModal() {
+            const content = document.getElementById('admin-modal-content');
+            content.innerHTML = `
+                <h3 class="text-xl font-bold mb-6">Create New Access Login</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Login ID / Email</label>
+                        <input type="text" id="new-user-id" class="w-full border p-2 rounded" placeholder="e.g. stage1@gmail.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Password</label>
+                        <input type="text" id="new-user-pwd" class="w-full border p-2 rounded" placeholder="e.g. 123456">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Role</label>
+                        <select id="new-user-role" class="w-full border p-2 rounded">
+                            <option value="stage">Stage Manager</option>
+                            <option value="judge">Judge</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Stage Assignment</label>
+                        <input type="text" id="new-user-stage" class="w-full border p-2 rounded" placeholder="e.g. Stage 1">
+                    </div>
+                    <button onclick="createNewUser()" class="w-full bg-sahithyolsav text-white py-3 rounded-lg font-bold">Save Login Credentials</button>
+                </div>
+            `;
+            openAdminModal();
+        }
+
+        async function createNewUser() {
+            const login_id = document.getElementById('new-user-id').value;
+            const password = document.getElementById('new-user-pwd').value;
+            const role = document.getElementById('new-user-role').value;
+            const stage_assigned = document.getElementById('new-user-stage').value;
+
+            if(!login_id || !password) return showToast("ID and Password required", "error");
+
+            showLoading(true);
+            const { error } = await supabaseClient.from('users_auth').insert({ login_id, password, role, stage_assigned });
+            showLoading(false);
+
+            if(error) showToast(error.message, "error");
+            else {
+                showToast("Login created successfully", "success");
+                closeAdminModal();
+                loadAdminUsers();
+            }
+        }
+
         async function showAddProgramModal() {
-            const name = prompt("Enter Program Name:");
-            const stage = prompt("Assign Stage ID (e.g. Stage 1):");
-            if (name && stage) {
-                await supabaseClient.from('programs').insert({ name, stage_id: stage });
+            const content = document.getElementById('admin-modal-content');
+            const categories = [
+                'Lower Primary', 'Upper Primary', 'High School', 'Higher Secondary', 
+                'Junior', 'Senior', 'General', 'Campus', 'Campus Girls Parallel'
+            ];
+            
+            content.innerHTML = `
+                <h3 class="text-xl font-bold mb-6">Add New Program</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Program Name</label>
+                        <input type="text" id="prog-name" class="w-full border p-2 rounded" placeholder="e.g. Story Writing">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Category</label>
+                        <select id="prog-cat" class="w-full border p-2 rounded">
+                            ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Stage Assignment</label>
+                        <input type="text" id="prog-stage" class="w-full border p-2 rounded" placeholder="e.g. Stage 1">
+                    </div>
+                    <button onclick="createNewProgram()" class="w-full bg-sahithyolsav text-white py-3 rounded-lg font-bold">Add Program</button>
+                </div>
+            `;
+            openAdminModal();
+        }
+
+        async function createNewProgram() {
+            const name = document.getElementById('prog-name').value;
+            const category = document.getElementById('prog-cat').value;
+            const stage_id = document.getElementById('prog-stage').value;
+
+            if(!name || !stage_id) return showToast("Name and Stage required", "error");
+
+            showLoading(true);
+            const { error } = await supabaseClient.from('programs').insert({ name, category, stage_id });
+            showLoading(false);
+
+            if(error) showToast(error.message, "error");
+            else {
+                showToast("Program added", "success");
+                closeAdminModal();
                 fetchAdminPrograms();
+            }
+        }
+
+        async function deleteUser(id) {
+            if (confirm("Permanently delete this login?")) {
+                await supabaseClient.from('users_auth').delete().eq('id', id);
+                loadAdminUsers();
             }
         }
 
@@ -434,7 +547,7 @@
                 if (data && data.length > 0) {
                     list.innerHTML = data.map(p => `
                         <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
-                            <span class="font-bold">${p.name}</span>
+                            <span class="font-bold">${p.name} (${p.category})</span>
                             <button onclick="publishResult('${p.id}')" class="bg-green-600 text-white px-4 py-1 rounded">Publish Result</button>
                         </div>
                     `).join('');
@@ -465,9 +578,12 @@
             const list = document.getElementById('stage-programs-list');
             if (data && list) {
                 list.innerHTML = data.map(p => `
-                    <div onclick="openStageProgram('${p.id}')" class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-orange-500 cursor-pointer hover:bg-orange-50">
-                        <span class="text-lg font-bold">${p.name}</span>
-                        <span class="ml-4 text-sm text-gray-400">${p.status}</span>
+                    <div onclick="openStageProgram('${p.id}')" class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-orange-500 cursor-pointer hover:bg-orange-50 flex justify-between items-center">
+                        <div>
+                            <div class="text-lg font-bold">${p.name}</div>
+                            <div class="text-xs text-gray-500 uppercase font-bold">${p.category}</div>
+                        </div>
+                        <span class="text-sm px-3 py-1 bg-gray-100 rounded-full font-bold text-gray-600">${p.status}</span>
                     </div>
                 `).join('');
             }
@@ -487,8 +603,9 @@
             const list = document.getElementById('judge-programs');
             if (data && list) {
                 list.innerHTML = data.map(p => `
-                    <button onclick="openJudgeProgram('${p.id}')" class="w-full text-left bg-white p-4 rounded-xl border-2 hover:border-orange-500 font-bold">
-                        ${p.name}
+                    <button onclick="openJudgeProgram('${p.id}')" class="w-full text-left bg-white p-4 rounded-xl border-2 hover:border-orange-500 font-bold flex justify-between items-center">
+                        <span>${p.name} <small class="opacity-50">(${p.category})</small></span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
                     </button>
                 `).join('');
             }
@@ -503,7 +620,7 @@
                 count.innerText = data.length;
                 grid.innerHTML = data.map(p => `
                     <div onclick="showProgramResult('${p.id}')" class="bg-gray-50 p-4 rounded-xl border-2 hover:border-orange-500 cursor-pointer transition flex justify-between items-center group">
-                        <span class="font-bold text-gray-700">${p.name}</span>
+                        <span class="font-bold text-gray-700">${p.name} <small class="text-gray-400 font-normal">(${p.category})</small></span>
                         <svg class="w-5 h-5 text-sahithyolsav" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
                     </div>
                 `).join('');
@@ -541,8 +658,11 @@
             if (data && list) {
                 list.innerHTML = data.map(p => `
                     <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center">
-                        <div><span class="font-bold">${p.name}</span><span class="ml-4 text-xs bg-gray-100 px-2 py-1 rounded">${p.stage_id || 'Unassigned'}</span></div>
-                        <button onclick="deleteProgram('${p.id}')" class="text-red-500 p-2">Delete</button>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-lg">${p.name}</span>
+                            <span class="text-xs font-bold text-sahithyolsav uppercase tracking-widest">${p.category} | ${p.stage_id || 'Unassigned'}</span>
+                        </div>
+                        <button onclick="deleteProgram('${p.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg">Delete</button>
                     </div>
                 `).join('');
             }
@@ -558,7 +678,10 @@
                 for (let row of jsonData) {
                     let { data: prog } = await supabaseClient.from('programs').select('id').eq('name', row.ProgramName || row.Program).single();
                     if (!prog) {
-                        const { data: newP } = await supabaseClient.from('programs').insert({ name: row.ProgramName || row.Program }).select().single();
+                        const { data: newP } = await supabaseClient.from('programs').insert({ 
+                            name: row.ProgramName || row.Program,
+                            category: row.Category || 'General' 
+                        }).select().single();
                         prog = newP;
                     }
                     await supabaseClient.from('participants').insert({ program_id: prog.id, participation_number: row.ParticipationNumber || row['Participation#'], name: row.Name, sector: row.Sector });
