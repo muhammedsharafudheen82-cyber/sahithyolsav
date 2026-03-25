@@ -52,8 +52,8 @@
         /* Scratch Card Effect */
         .scratch-container {
             position: relative;
-            width: 70px;
-            height: 45px;
+            width: 80px;
+            height: 50px;
             background: #f1f5f9;
             border: 2px dashed #cbd5e1;
             border-radius: 8px;
@@ -62,7 +62,7 @@
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             color: var(--brand-orange);
             overflow: hidden;
             transition: all 0.3s ease;
@@ -75,15 +75,17 @@
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            font-weight: bold;
             transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s ease;
+            z-index: 10;
         }
         .scratched .scratch-overlay { 
             opacity: 0; 
             pointer-events: none; 
-            transform: scale(1.2);
+            transform: translateY(-100%);
         }
         .scratched {
             border-style: solid;
@@ -791,7 +793,7 @@
                     <div><h1 class="text-4xl md:text-5xl font-ssf leading-tight">${prog.name}</h1><p class="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase mt-2">${prog.category} • ${prog.stage_id}</p></div>
                     <div class="flex flex-wrap gap-4">
                         ${!evaluationMode ? `
-                            ${!hasCodes ? `<button onclick="startChessSelection('${prog.id}')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Assign Chess Codes</button>` : `<button onclick="openStageProgram('${prog.id}', true)" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Start Evaluation Mode</button>`}
+                            ${!hasCodes ? `<button onclick="startChessSelection('${prog.id}')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Assign Code Letters</button>` : `<button onclick="openStageProgram('${prog.id}', true)" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Start Evaluation Mode</button>`}
                         ` : `
                             <button onclick="finishStageProgram('${prog.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Transfer Result to Admin</button>
                         `}
@@ -816,14 +818,14 @@
                                         <span class="text-sm font-black uppercase tracking-wider ${p.attendance ? 'text-emerald-600' : 'text-slate-400'}">Present</span>
                                     </label>
                                     ${p.chess_number ? `
-                                        <div id="scratch-${p.id}" onclick="this.classList.add('scratched')" class="scratch-container ${p.chess_number ? 'scratched' : ''}">
-                                            <div class="scratch-overlay">Scratch</div>
+                                        <div id="scratch-${p.id}" onclick="this.classList.add('scratched')" class="scratch-container">
+                                            <div class="scratch-overlay">Scratch Code</div>
                                             <span>${p.chess_number}</span>
                                         </div>
                                     ` : '<div class="text-xs text-slate-300 font-bold uppercase italic">Awaiting Codes</div>'}
                                 </div>
                             ` : `
-                                <!-- scoring Phase (Anonymous) -->
+                                <!-- Scoring Phase (Anonymous) -->
                                 <div class="w-24 h-24 rounded-full bg-slate-950 text-white flex items-center justify-center font-black text-4xl shadow-xl border-4 border-orange-600">
                                     ${p.chess_number}
                                 </div>
@@ -845,12 +847,16 @@
             
             showLoading(true);
             let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, parts.length).sort(() => Math.random() - 0.5);
-            for (let i = 0; i < parts.length; i++) { 
-                await supabaseClient.from('participants').update({ chess_number: letters[i] }).eq('id', parts[i].id); 
-            }
+            
+            // Parallel batch update
+            const updates = parts.map((p, i) => 
+                supabaseClient.from('participants').update({ chess_number: letters[i] }).eq('id', p.id)
+            );
+            await Promise.all(updates);
+            
             showLoading(false); 
-            openStageProgram(progId); 
-            showToast("Chess codes assigned! Reveal them with participants.");
+            await openStageProgram(progId); 
+            showToast("Chess letters assigned! Reveal them with participants.");
         }
 
         async function updateEntry(partId) {
@@ -886,7 +892,7 @@
                         </div>
                         <div class="flex gap-2">
                              <button onclick="viewTransferData('${p.id}')" class="bg-slate-100 text-slate-900 px-6 py-3 rounded-full font-bold">Review Entries</button>
-                             <button onclick="publishPublicResult('${p.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Approve & Publish</button>
+                             <button onclick="publishPublicResult('${p.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg text-sm">Approve & Publish</button>
                         </div>
                     </div>`).join('');
             }
@@ -897,12 +903,24 @@
             const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).order('score', { ascending: false });
             showLoading(false);
             const content = document.getElementById('admin-modal-content');
+            
+            // Calculate Position/Rank
+            let currentRank = 1;
+            const rankedParts = (parts || []).map((p, i, arr) => {
+                if (i > 0 && p.score < arr[i-1].score) currentRank = i + 1;
+                return { ...p, position: currentRank };
+            });
+
             content.innerHTML = `<h2 class="text-2xl font-black mb-6">Review Transferred Data</h2>
-                <div class="space-y-2">
-                    ${parts.map(p => `<div class="p-4 bg-slate-50 rounded-xl flex justify-between">
-                        <div><div class="font-bold">${p.name} (${p.chess_number})</div><div class="text-xs text-slate-400">Score: ${p.score}</div></div>
-                        <div class="text-orange-600 font-black">#${p.participation_number}</div>
+                <div class="space-y-3">
+                    ${rankedParts.map(p => `<div class="p-5 bg-slate-50 rounded-2xl flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-slate-950 text-white flex items-center justify-center font-black text-sm">${p.position}</div>
+                            <div><div class="font-bold text-slate-900">${p.name}</div><div class="text-[10px] text-slate-400 uppercase font-bold">Code: ${p.chess_number} | ID: #${p.participation_number}</div></div>
+                        </div>
+                        <div class="text-orange-600 font-black text-xl">${p.score}</div>
                     </div>`).join('')}
+                    ${parts.length === 0 ? '<p class="text-center text-slate-400 py-10">No scores found.</p>' : ''}
                 </div>`;
             openAdminModal();
         }
