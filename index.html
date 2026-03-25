@@ -52,11 +52,11 @@
         /* Scratch Card Effect */
         .scratch-container {
             position: relative;
-            width: 80px;
+            width: 90px;
             height: 50px;
-            background: #f1f5f9;
-            border: 2px dashed #cbd5e1;
-            border-radius: 8px;
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -65,33 +65,36 @@
             font-size: 1.5rem;
             color: var(--brand-orange);
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
         .scratch-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #94a3b8 0%, #cbd5e1 100%);
+            background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-weight: bold;
-            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s ease;
+            font-weight: 800;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 10;
+        }
+        .scratch-container:hover .scratch-overlay {
+            background: linear-gradient(135deg, #475569 0%, #64748b 100%);
         }
         .scratched .scratch-overlay { 
             opacity: 0; 
             pointer-events: none; 
-            transform: translateY(-100%);
+            transform: scale(1.5) rotate(15deg);
         }
         .scratched {
-            border-style: solid;
             border-color: var(--brand-orange);
             background: #fff7ed;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            box-shadow: inset 0 2px 4px rgba(249, 115, 22, 0.1);
         }
 
         /* Glassmorphism */
@@ -814,7 +817,7 @@
                                 </div>
                                 <div class="w-full lg:w-1/4 flex flex-col items-center justify-center border-l border-r border-slate-50 px-8">
                                     <label class="flex items-center gap-3 mb-4 cursor-pointer">
-                                        <input type="checkbox" ${p.attendance ? 'checked' : ''} onchange="markAttendance('${p.id}', this.checked)" class="w-6 h-6 rounded-lg accent-orange-600">
+                                        <input type="checkbox" ${p.attendance ? 'checked' : ''} onchange="markAttendance('${p.id}', this.checked, '${prog.id}')" class="w-6 h-6 rounded-lg accent-orange-600">
                                         <span class="text-sm font-black uppercase tracking-wider ${p.attendance ? 'text-emerald-600' : 'text-slate-400'}">Present</span>
                                     </label>
                                     ${p.chess_number ? `
@@ -846,17 +849,31 @@
             if(!parts || parts.length === 0) return showToast("Mark attendance before assigning codes", "error");
             
             showLoading(true);
-            let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, parts.length).sort(() => Math.random() - 0.5);
+            
+            // Generate sequence A, B, C... Z, AA, AB...
+            const generateCode = (index) => {
+                let code = '';
+                while (index >= 0) {
+                    code = String.fromCharCode((index % 26) + 65) + code;
+                    index = Math.floor(index / 26) - 1;
+                }
+                return code;
+            };
+
+            const indices = parts.map((_, i) => i).sort(() => Math.random() - 0.5);
             
             // Parallel batch update
             const updates = parts.map((p, i) => 
-                supabaseClient.from('participants').update({ chess_number: letters[i] }).eq('id', p.id)
+                supabaseClient.from('participants').update({ chess_number: generateCode(indices[i]) }).eq('id', p.id)
             );
             await Promise.all(updates);
             
             showLoading(false); 
-            await openStageProgram(progId); 
-            showToast("Chess letters assigned! Reveal them with participants.");
+            // Wait slightly for DB propagation before re-fetching
+            setTimeout(async () => {
+                await openStageProgram(progId); 
+                showToast("Chess letters assigned! Reveal them with participants.");
+            }, 500);
         }
 
         async function updateEntry(partId) {
@@ -866,8 +883,10 @@
             if (!error) showToast("Scores synchronized");
         }
 
-        async function markAttendance(id, present) { 
+        async function markAttendance(id, present, progId) { 
             await supabaseClient.from('participants').update({ attendance: present }).eq('id', id); 
+            // Reactive UI: only update the data locally or re-fetch header state
+            showToast(present ? "Marked Present" : "Marked Absent");
         }
 
         async function finishStageProgram(id) {
