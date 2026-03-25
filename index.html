@@ -796,9 +796,9 @@
                     <div><h1 class="text-4xl md:text-5xl font-ssf leading-tight">${prog.name}</h1><p class="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase mt-2">${prog.category} • ${prog.stage_id}</p></div>
                     <div class="flex flex-wrap gap-4">
                         ${!evaluationMode ? `
-                            ${!hasCodes ? `<button onclick="startChessSelection('${prog.id}')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Assign Code Letters</button>` : `<button onclick="openStageProgram('${prog.id}', true)" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Start Evaluation Mode</button>`}
+                            ${!hasCodes ? `<button onclick="startChessSelection('${prog.id}')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Assign Code Letters</button>` : `<button onclick="openStageProgram('${prog.id}', true)" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg text-sm">Start Evaluation Mode</button>`}
                         ` : `
-                            <button onclick="finishStageProgram('${prog.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg">Transfer Result to Admin</button>
+                            <button onclick="finishStageProgram('${prog.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg text-sm">Transfer Result to Admin</button>
                         `}
                     </div>
                 </div>
@@ -845,6 +845,7 @@
         }
 
         async function startChessSelection(progId) {
+            // Re-fetch latest attendance to be sure
             const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).eq('attendance', true);
             if(!parts || parts.length === 0) return showToast("Mark attendance before assigning codes", "error");
             
@@ -866,18 +867,16 @@
             const updates = parts.map((p, i) => 
                 supabaseClient.from('participants').update({ chess_number: generateCode(indices[i]) }).eq('id', p.id)
             );
-            await Promise.all(updates);
-            
-            showLoading(false); 
-            // Fetch updated data immediately to confirm the state
-            const { data: verifiedParts } = await supabaseClient.from('participants').select('chess_number').eq('program_id', progId);
-            const verified = (verifiedParts || []).some(p => p.chess_number);
+            const results = await Promise.all(updates);
+            const failed = results.some(r => r.error);
 
-            if (verified) {
+            showLoading(false); 
+            
+            if (!failed) {
                 await openStageProgram(progId); 
                 showToast("Chess letters assigned! Reveal them with participants.");
             } else {
-                showToast("Sync issue, please try assigning codes again.", "error");
+                showToast("Error writing codes to database.", "error");
             }
         }
 
@@ -920,7 +919,7 @@
                         </div>
                         <div class="flex gap-2">
                              <button onclick="viewTransferData('${p.id}')" class="bg-slate-100 text-slate-900 px-6 py-3 rounded-full font-bold">Review Entries</button>
-                             <button onclick="publishPublicResult('${p.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg text-sm">Approve & Publish</button>
+                             <button onclick="publishPublicResult('${p.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg text-sm text-center">Approve & Publish</button>
                         </div>
                     </div>`).join('');
             }
