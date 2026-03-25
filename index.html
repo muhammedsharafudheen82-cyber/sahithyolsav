@@ -288,6 +288,8 @@
             const ticker = document.getElementById('news-ticker');
             if (data && data.length > 0) {
                 ticker.innerText = data.map(n => n.content).join('   •   ');
+            } else {
+                ticker.innerText = "Welcome to Sahithyolsav 2025 Nilambur Division! Stay tuned for live updates and results.";
             }
         }
 
