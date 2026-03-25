@@ -35,24 +35,34 @@
 
         .scratch-container {
             position: relative;
-            width: 80px;
-            height: 40px;
-            background: #ccc;
-            border-radius: 4px;
+            width: 100px;
+            height: 50px;
+            background: #eee;
+            border-radius: 8px;
             cursor: pointer;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            border: 2px solid #ddd;
+            transition: all 0.3s;
         }
         .scratch-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(45deg, #888, #bbb);
-            transition: opacity 0.3s;
+            background: linear-gradient(45deg, #f97316, #ea580c);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        .scratched .scratch-overlay { opacity: 0; pointer-events: none; }
+        .scratched .scratch-overlay { opacity: 0; pointer-events: none; transform: scale(1.2); transition: 0.4s ease-in-out; }
+        .scratched { border-color: #f97316; background: #fff7ed; box-shadow: 0 0 15px rgba(249, 115, 22, 0.2); }
 
         .poster-card {
             width: 400px;
@@ -391,81 +401,35 @@
             }
         }
 
-        // News Admin Logic
+        // Previous Admin features (kept intact)
         async function fetchAdminNews() {
             const { data } = await supabaseClient.from('news').select('*').order('created_at', { ascending: false });
             const list = document.getElementById('admin-news-list');
-            if (data && list) {
-                list.innerHTML = data.map(n => `
-                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
-                        <span class="text-sm font-bold">${n.content}</span>
-                        <button onclick="deleteNews('${n.id}')" class="text-red-500 font-bold p-2">Delete</button>
-                    </div>
-                `).join('');
-            }
+            if (data && list) list.innerHTML = data.map(n => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center"><span class="text-sm font-bold">${n.content}</span><button onclick="deleteNews('${n.id}')" class="text-red-500 font-bold p-2">Delete</button></div>`).join('');
         }
-
         function showAddNewsModal() {
             const content = document.getElementById('admin-modal-content');
-            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add New Announcement</h3>
-                <textarea id="news-content" class="w-full border p-2 rounded mb-4 h-24" placeholder="Type news content here..."></textarea>
-                <button onclick="saveNews()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Post News</button>`;
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add Announcement</h3><textarea id="news-content" class="w-full border p-2 rounded mb-4 h-24"></textarea><button onclick="saveNews()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Post News</button>`;
             openAdminModal();
         }
+        async function saveNews() { const c = document.getElementById('news-content').value; if(!c) return; await supabaseClient.from('news').insert({ content: c }); closeAdminModal(); adminSub('news'); }
+        async function deleteNews(id) { await supabaseClient.from('news').delete().eq('id', id); adminSub('news'); }
 
-        async function saveNews() {
-            const content = document.getElementById('news-content').value;
-            if(!content) return;
-            await supabaseClient.from('news').insert({ content });
-            showToast("News Posted", "success"); closeAdminModal(); adminSub('news');
-        }
-
-        async function deleteNews(id) {
-            await supabaseClient.from('news').delete().eq('id', id);
-            adminSub('news');
-        }
-
-        // Media Admin Logic
         async function fetchAdminMedia(type) {
             const { data } = await supabaseClient.from('media').select('*').eq('type', type).order('created_at', { ascending: false });
             const listId = type === 'image' ? 'admin-gallery-list' : 'admin-video-list';
             const list = document.getElementById(listId);
             if (!data || !list) return;
-
-            list.innerHTML = data.map(m => `
-                <div class="bg-white p-2 rounded-lg border shadow-sm flex flex-col items-center">
-                    ${type === 'image' ? `<img src="${m.url}" class="w-full h-24 object-cover mb-2">` : `<div class="bg-gray-200 w-full h-24 flex items-center justify-center text-xs">Video Link</div>`}
-                    <div class="text-[10px] font-bold mb-2 truncate w-full text-center">${m.title}</div>
-                    <button onclick="deleteMedia('${m.id}', '${type}')" class="text-xs text-red-500 font-bold underline">Remove</button>
-                </div>
-            `).join('');
+            list.innerHTML = data.map(m => `<div class="bg-white p-2 rounded-lg border flex flex-col items-center">${type === 'image' ? `<img src="${m.url}" class="w-full h-24 object-cover mb-2">` : `<div class="bg-gray-200 w-full h-24 flex items-center justify-center text-xs">Video</div>`}<div class="text-[10px] font-bold mb-2 truncate w-full text-center">${m.title}</div><button onclick="deleteMedia('${m.id}', '${type}')" class="text-xs text-red-500 font-bold underline">Remove</button></div>`).join('');
         }
-
         function showAddMediaModal(type) {
             const content = document.getElementById('admin-modal-content');
-            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add ${type === 'image' ? 'Gallery Image' : 'Video Link'}</h3>
-                <div class="space-y-4">
-                    <input type="text" id="media-title" placeholder="Title" class="w-full border p-2 rounded">
-                    <input type="text" id="media-url" placeholder="${type === 'image' ? 'Image URL' : 'YouTube Link'}" class="w-full border p-2 rounded">
-                    <button onclick="saveMedia('${type}')" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold text-sm uppercase">Add to ${type === 'image' ? 'Gallery' : 'Videos'}</button>
-                </div>`;
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add ${type}</h3><input type="text" id="media-title" placeholder="Title" class="w-full border p-2 rounded mb-2"><input type="text" id="media-url" placeholder="URL" class="w-full border p-2 rounded mb-4"><button onclick="saveMedia('${type}')" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Save</button>`;
             openAdminModal();
         }
+        async function saveMedia(type) { const t = document.getElementById('media-title').value; const u = document.getElementById('media-url').value; if(!u) return; await supabaseClient.from('media').insert({ title: t, url: u, type }); closeAdminModal(); adminSub(type === 'image' ? 'gallery' : 'videos'); }
+        async function deleteMedia(id, type) { await supabaseClient.from('media').delete().eq('id', id); adminSub(type === 'image' ? 'gallery' : 'videos'); }
 
-        async function saveMedia(type) {
-            const title = document.getElementById('media-title').value;
-            const url = document.getElementById('media-url').value;
-            if(!url) return;
-            await supabaseClient.from('media').insert({ title, url, type });
-            showToast("Added successfully", "success"); closeAdminModal(); adminSub(type === 'image' ? 'gallery' : 'videos');
-        }
-
-        async function deleteMedia(id, type) {
-            await supabaseClient.from('media').delete().eq('id', id);
-            adminSub(type === 'image' ? 'gallery' : 'videos');
-        }
-
-        // Previous features (kept intact)
         function downloadDemoExcel() {
             const data = [{ ProgramName: "Elocution", Category: "Senior", Name: "Muhammed", Sector: "Nilambur", ParticipationNumber: "101" }];
             const ws = XLSX.utils.json_to_sheet(data);
@@ -477,27 +441,13 @@
         async function showAddParticipantModal() {
             const { data: progs } = await supabaseClient.from('programs').select('*');
             const content = document.getElementById('admin-modal-content');
-            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf text-sahithyolsav">Add Participant Manually</h3>
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf text-sahithyolsav text-center uppercase tracking-widest">Manual Participant Entry</h3>
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Participant Name</label>
-                        <input type="text" id="p-name" placeholder="Full Name" class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Participant Number / ID</label>
-                        <input type="text" id="p-no" placeholder="e.g. 101" class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Sector Name</label>
-                        <input type="text" id="p-sector" placeholder="Sector Name" class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Assign to Program</label>
-                        <select id="p-prog" class="w-full border p-2 rounded">
-                            ${progs.map(p => `<option value="${p.id}">${p.name} (${p.category})</option>`).join('')}
-                        </select>
-                    </div>
-                    <button onclick="addParticipantManual()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold uppercase text-sm mt-4">Save Participant Data</button>
+                    <div><label class="text-[10px] font-bold text-gray-400">PARTICIPANT NAME</label><input type="text" id="p-name" class="w-full border p-2 rounded"></div>
+                    <div><label class="text-[10px] font-bold text-gray-400">PARTICIPANT NUMBER</label><input type="text" id="p-no" class="w-full border p-2 rounded"></div>
+                    <div><label class="text-[10px] font-bold text-gray-400">SECTOR</label><input type="text" id="p-sector" class="w-full border p-2 rounded"></div>
+                    <div><label class="text-[10px] font-bold text-gray-400">PROGRAM</label><select id="p-prog" class="w-full border p-2 rounded">${progs.map(p => `<option value="${p.id}">${p.name} (${p.category})</option>`).join('')}</select></div>
+                    <button onclick="addParticipantManual()" class="w-full bg-sahithyolsav text-white py-3 rounded-xl font-bold uppercase mt-4 shadow-lg">Save Participant</button>
                 </div>`;
             openAdminModal();
         }
@@ -507,53 +457,24 @@
             const participation_number = document.getElementById('p-no').value;
             const sector = document.getElementById('p-sector').value;
             const program_id = document.getElementById('p-prog').value;
-            if(!name || !participation_number) return showToast("Name and Number are required", "error");
-            
+            if(!name || !participation_number) return showToast("Name and Number required", "error");
             showLoading(true);
             await supabaseClient.from('participants').insert({ name, participation_number, sector, program_id });
-            showLoading(false); 
-            showToast("Participant Added Successfully", "success"); 
-            closeAdminModal();
-            fetchAdminParticipants();
+            showLoading(false); showToast("Added Successfully", "success"); closeAdminModal(); fetchAdminParticipants();
         }
 
         async function fetchAdminParticipants() {
             const search = document.getElementById('p-search')?.value || '';
-            let query = supabaseClient.from('participants').select('*, programs(name, category)');
-            
-            // Note: In local execution, we don't have indexes for complex filters, 
-            // so we fetch and filter in memory if the user query is very complex.
-            // For now, simple text match:
-            const { data } = await query.order('name', { ascending: true }).limit(50);
+            const { data } = await supabaseClient.from('participants').select('*, programs(name, category)').order('name', { ascending: true }).limit(100);
             const list = document.getElementById('admin-participants-list');
             if (!list) return;
-
-            const filtered = search ? data.filter(p => 
-                p.name.toLowerCase().includes(search.toLowerCase()) || 
-                p.participation_number.toLowerCase().includes(search.toLowerCase())
-            ) : data;
-
-            if (filtered && list) {
-                list.innerHTML = filtered.map(p => `
-                    <div class="flex justify-between items-center p-3 border-b bg-white hover:bg-gray-50 transition">
-                        <div>
-                            <div class="font-bold text-sm">${p.name} <span class="text-sahithyolsav font-bold">#${p.participation_number}</span></div>
-                            <div class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">${p.programs?.name || 'No Program'} | ${p.sector}</div>
-                        </div>
-                        <button onclick="deleteParticipant('${p.id}')" class="text-[10px] font-bold text-red-500 hover:bg-red-50 px-2 py-1 rounded">Delete</button>
-                    </div>
-                `).join('');
-                if(filtered.length === 0) list.innerHTML = `<div class="p-4 text-center text-gray-400 italic">No participants found</div>`;
-            }
+            const filtered = search ? data.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.participation_number.toLowerCase().includes(search.toLowerCase())) : data;
+            list.innerHTML = filtered.map(p => `<div class="flex justify-between items-center p-3 border-b bg-white"><div><div class="font-bold text-sm">${p.name} <span class="text-sahithyolsav">#${p.participation_number}</span></div><div class="text-[10px] text-gray-500 uppercase font-bold">${p.programs?.name || ''} | ${p.sector}</div></div><button onclick="deleteParticipant('${p.id}')" class="text-xs text-red-500 font-bold">Delete</button></div>`).join('');
         }
 
-        async function deleteParticipant(id) {
-            if(!confirm("Are you sure you want to delete this participant?")) return;
-            await supabaseClient.from('participants').delete().eq('id', id);
-            showToast("Participant deleted", "success");
-            fetchAdminParticipants();
-        }
+        async function deleteParticipant(id) { if(confirm("Delete this participant?")) { await supabaseClient.from('participants').delete().eq('id', id); fetchAdminParticipants(); } }
 
+        // --- STAGE PORTAL UPDATES ---
         function renderStage() {
             return `<div class="container mx-auto px-4 py-12 max-w-5xl">
                 <h2 class="text-3xl font-ssf text-sahithyolsav mb-8">Stage Manager: ${currentUser?.stage_assigned || 'Master'}</h2>
@@ -576,72 +497,110 @@
             const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', id).order('chess_number', { ascending: true });
             
             const main = document.getElementById('app-view');
+            const hasStartedReveal = parts.some(p => p.chess_number);
+            const presentParts = parts.filter(p => p.attendance);
+            const allPresentScratched = presentParts.length > 0 && presentParts.every(p => p.chess_number);
+
             main.innerHTML = `
                 <div class="container mx-auto px-4 py-8 max-w-6xl">
                     <button onclick="navigate('stage')" class="mb-6 font-bold text-sahithyolsav flex items-center gap-2">← Back to Portal</button>
                     <div class="bg-white rounded-3xl p-8 shadow-xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-t-8 border-sahithyolsav">
-                        <div><h1 class="text-3xl font-ssf">${prog.name}</h1><p class="text-xs font-bold text-gray-400 tracking-widest uppercase">${prog.category} | ${prog.stage_id}</p></div>
+                        <div><h1 class="text-3xl font-ssf uppercase">${prog.name}</h1><p class="text-xs font-bold text-gray-400 tracking-widest uppercase">${prog.category} | ${prog.stage_id}</p></div>
                         <div class="flex gap-2">
-                            <button onclick="startChessSelection('${prog.id}')" class="bg-black text-white px-6 py-2 rounded-full font-bold shadow-lg">Randomize Chess Reveal</button>
-                            <button onclick="finishStageProgram('${prog.id}')" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">Finish Program</button>
+                            ${!hasStartedReveal ? `<button onclick="startProgramReveal('${prog.id}')" class="bg-black text-white px-6 py-2 rounded-full font-bold shadow-lg">Start Program Reveal</button>` : ''}
+                            <button onclick="finishStageProgram('${prog.id}')" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">Submit Results to Admin</button>
                         </div>
                     </div>
+
                     <div class="grid gap-6">
-                        ${parts.map(p => `
-                            <div class="bg-white rounded-2xl shadow-md border p-6 flex flex-col lg:flex-row items-center gap-6">
+                        ${parts.map(p => {
+                            // As requested: "if all present participant take chess number then he can only view chess number only"
+                            const showPrivacyView = allPresentScratched && p.attendance;
+                            
+                            return `
+                            <div class="bg-white rounded-2xl shadow-md border p-6 flex flex-col lg:flex-row items-center gap-6 ${!p.attendance && hasStartedReveal ? 'opacity-30' : ''}">
+                                
+                                ${!showPrivacyView ? `
                                 <div class="w-full lg:w-1/4">
-                                    <div class="text-xs font-bold text-gray-400 uppercase tracking-tighter">ID: ${p.participation_number}</div>
+                                    <div class="text-xs font-bold text-gray-400">ID: ${p.participation_number}</div>
                                     <div class="text-xl font-bold">${p.name}</div>
                                     <div class="text-sm font-bold text-sahithyolsav">${p.sector}</div>
-                                </div>
-                                <div class="w-full lg:w-1/4 flex flex-col items-center border-l border-r px-4 border-gray-100">
+                                </div>` : `
+                                <div class="w-full lg:w-1/4 flex items-center gap-4">
+                                    <div class="text-5xl font-ssf text-sahithyolsav">${p.chess_number}</div>
+                                    <div class="text-[10px] font-bold text-gray-400 uppercase leading-none">Chess<br>Unit Active</div>
+                                </div>`}
+
+                                <div class="w-full lg:w-1/4 flex flex-col items-center ${!showPrivacyView ? 'border-l border-r border-gray-100 px-4' : ''}">
+                                    ${!hasStartedReveal ? `
                                     <div class="flex items-center gap-2 mb-2">
-                                        <input type="checkbox" ${p.attendance ? 'checked' : ''} onchange="markAttendance('${p.id}', this.checked)" class="w-5 h-5 accent-sahithyolsav">
-                                        <span class="text-sm font-bold">Present</span>
-                                    </div>
-                                    <div id="scratch-${p.id}" class="scratch-container ${p.chess_number ? 'scratched' : ''}">
-                                        <div class="scratch-overlay"></div>
-                                        <span>${p.chess_number || '?'}</span>
-                                    </div>
+                                        <input type="checkbox" ${p.attendance ? 'checked' : ''} onchange="markAttendance('${p.id}', this.checked)" class="w-6 h-6 accent-sahithyolsav cursor-pointer">
+                                        <span class="text-sm font-bold uppercase">Mark Present</span>
+                                    </div>` : ''}
+                                    
+                                    ${p.attendance ? `
+                                    <div id="scratch-${p.id}" class="scratch-container ${p.chess_number ? 'scratched' : ''}" onclick="revealParticipantChess('${p.id}', '${id}')">
+                                        <div class="scratch-overlay">SCRATCH ME</div>
+                                        <span class="text-2xl font-ssf text-sahithyolsav">${p.chess_number || '?'}</span>
+                                    </div>` : `<div class="text-xs text-gray-300 italic font-bold">ABSENT</div>`}
                                 </div>
-                                <div class="w-full lg:w-2/4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="relative"><label class="text-[10px] font-bold text-gray-400 absolute top-1 left-2">SCORE (0-100)</label>
-                                        <input type="number" id="score-${p.id}" value="${p.score || ''}" class="w-full border pt-5 pb-1 px-2 rounded-lg font-bold text-lg">
+
+                                ${p.attendance ? `
+                                <div class="${showPrivacyView ? 'w-full lg:w-2/4' : 'w-full lg:w-2/4'} grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="relative"><label class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 uppercase">Score (0-100)</label>
+                                        <input type="number" id="score-${p.id}" value="${p.score || ''}" class="w-full border pt-5 pb-1 px-3 rounded-xl font-bold text-lg focus:ring-1 focus:ring-sahithyolsav outline-none">
                                     </div>
-                                    <div class="relative"><label class="text-[10px] font-bold text-gray-400 absolute top-1 left-2">FEEDBACK</label>
-                                        <input type="text" id="fb-${p.id}" value="${p.feedback || ''}" class="w-full border pt-5 pb-1 px-2 rounded-lg text-sm">
+                                    <div class="relative"><label class="text-[10px] font-bold text-gray-400 absolute top-1 left-2 uppercase">Feedback</label>
+                                        <input type="text" id="fb-${p.id}" value="${p.feedback || ''}" class="w-full border pt-5 pb-1 px-3 rounded-xl text-sm focus:ring-1 focus:ring-sahithyolsav outline-none">
                                     </div>
-                                    <button onclick="updateEntry('${p.id}')" class="md:col-span-2 bg-sahithyolsav text-white py-1 rounded-lg font-bold text-xs uppercase">Save Data</button>
-                                </div>
-                            </div>
-                        `).join('')}
+                                    <button onclick="updateEntry('${p.id}', '${id}')" class="md:col-span-2 bg-sahithyolsav text-white py-2 rounded-xl font-bold text-xs uppercase shadow hover:bg-orange-600 transition">Sync with Admin</button>
+                                </div>` : ''}
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>`;
         }
 
-        async function updateEntry(partId) {
+        async function startProgramReveal(progId) {
+            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).eq('attendance', true);
+            if(!parts.length) return showToast("No present participants marked", "error");
+            
+            // Randomly shuffle alphabet for present participants (A, B, C...)
+            let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, parts.length).sort(() => Math.random() - 0.5);
+            
+            showLoading(true);
+            for (let i = 0; i < parts.length; i++) {
+                await supabaseClient.from('participants').update({ chess_number: letters[i] }).eq('id', parts[i].id);
+            }
+            showLoading(false);
+            openStageProgram(progId);
+        }
+
+        async function revealParticipantChess(pId, progId) {
+            document.getElementById(`scratch-${pId}`).classList.add('scratched');
+            // Check if all are revealed to toggle privacy view immediately
+            setTimeout(() => openStageProgram(progId), 600);
+        }
+
+        async function updateEntry(partId, progId) {
             const score = document.getElementById(`score-${partId}`).value;
             const fb = document.getElementById(`fb-${partId}`).value;
             showLoading(true);
             await supabaseClient.from('participants').update({ score: score || 0, feedback: fb }).eq('id', partId);
-            showLoading(false); showToast("Data Saved", "success");
-        }
-
-        async function startChessSelection(progId) {
-            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).eq('attendance', true);
-            if(!parts.length) return showToast("No present participants", "error");
-            let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, parts.length).sort(() => Math.random() - 0.5);
-            for (let i = 0; i < parts.length; i++) { await supabaseClient.from('participants').update({ chess_number: letters[i] }).eq('id', parts[i].id); }
-            openStageProgram(progId);
+            showLoading(false); 
+            showToast("Details transferred to Admin login", "success");
         }
 
         async function finishStageProgram(id) {
-            if(!confirm("Submit final scores to Admin?")) return;
+            if(!confirm("Submit final results for Admin approval? This will lock current entries.")) return;
             await supabaseClient.from('programs').update({ status: 'completed' }).eq('id', id);
             navigate('stage');
         }
 
-        async function markAttendance(id, present) { await supabaseClient.from('participants').update({ attendance: present }).eq('id', id); }
+        async function markAttendance(id, present) { 
+            await supabaseClient.from('participants').update({ attendance: present }).eq('id', id); 
+        }
+
         function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
         function showToast(m, t) {
             const toast = document.createElement('div');
@@ -661,7 +620,7 @@
             const grid = document.getElementById('programs-grid');
             if (data && grid) {
                 document.getElementById('published-count').innerText = data.length;
-                grid.innerHTML = data.map(p => `<div onclick="showProgramResult('${p.id}')" class="bg-gray-50 p-4 rounded-xl border-2 hover:border-orange-500 cursor-pointer font-bold flex justify-between items-center group">
+                grid.innerHTML = data.map(p => `<div onclick="showProgramResult('${p.id}')" class="bg-gray-50 p-4 rounded-xl border-2 hover:border-orange-500 cursor-pointer font-bold flex justify-between items-center group transition">
                     <span>${p.name} <small class="text-gray-400 font-normal">(${p.category})</small></span>
                     <svg class="w-5 h-5 text-sahithyolsav" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
                 </div>`).join('');
@@ -672,22 +631,47 @@
             const { data } = await supabaseClient.from('programs').select('*').order('date_time', { ascending: false });
             const list = document.getElementById('admin-programs-list');
             if (data && list) list.innerHTML = data.map(p => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center">
-                <div class="flex flex-col"><span class="font-bold text-lg">${p.name}</span><span class="text-xs font-bold text-sahithyolsav uppercase">${p.category} | ${p.stage_id}</span></div>
-                <button onclick="deleteProgram('${p.id}')" class="text-red-500">Delete</button></div>`).join('');
+                <div class="flex flex-col"><span class="font-bold text-lg uppercase">${p.name}</span><span class="text-xs font-bold text-sahithyolsav uppercase tracking-wider">${p.category} | ${p.stage_id}</span></div>
+                <div class="flex gap-2">
+                    <button onclick="viewProgramDetailsAdmin('${p.id}')" class="text-xs font-bold text-blue-500 underline uppercase">View Real-time Data</button>
+                    <button onclick="deleteProgram('${p.id}')" class="text-red-500 font-bold text-xs uppercase">Delete</button>
+                </div></div>`).join('');
+        }
+
+        async function viewProgramDetailsAdmin(id) {
+            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', id).order('chess_number', { ascending: true });
+            const content = document.getElementById('admin-modal-content');
+            content.innerHTML = `<h3 class="text-xl font-ssf mb-4 text-sahithyolsav uppercase tracking-widest text-center">Live Participant Tracker</h3>
+                <div class="space-y-2 max-h-[60vh] overflow-y-auto">
+                    ${parts.map(p => `
+                        <div class="p-4 border rounded-xl flex justify-between items-center bg-gray-50 shadow-sm">
+                            <div>
+                                <div class="font-bold text-sm uppercase">${p.name}</div>
+                                <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Chess: <span class="text-orange-600">${p.chess_number || 'WAITING'}</span> | ID: ${p.participation_number}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs font-bold">${p.score || 0} Points</div>
+                                <div class="text-[9px] text-gray-400 font-bold uppercase">${p.attendance ? 'Present' : 'Absent'}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="closeAdminModal()" class="w-full bg-black text-white py-3 rounded-xl font-bold mt-6 uppercase text-xs">Close Real-time Monitor</button>`;
+            openAdminModal();
         }
 
         async function showAddProgramModal() {
             const cats = ['Lower Primary', 'Upper Primary', 'High School', 'Higher Secondary', 'Junior', 'Senior', 'General', 'Campus', 'Campus Girls Parallel'];
             const content = document.getElementById('admin-modal-content');
-            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add Program</h3>
-                <input type="text" id="prog-name" placeholder="Program Name" class="w-full border p-2 rounded mb-2">
-                <select id="prog-cat" class="w-full border p-2 rounded mb-2">
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf uppercase text-sahithyolsav text-center">Add Program</h3>
+                <input type="text" id="prog-name" placeholder="Program Name" class="w-full border p-3 rounded-xl mb-3 outline-none focus:ring-1 focus:ring-sahithyolsav">
+                <select id="prog-cat" class="w-full border p-3 rounded-xl mb-3 outline-none focus:ring-1 focus:ring-sahithyolsav">
                     ${cats.map(c => `<option value="${c}">${c}</option>`).join('')}
                 </select>
-                <select id="prog-stage" class="w-full border p-2 rounded mb-4">
+                <select id="prog-stage" class="w-full border p-3 rounded-xl mb-4 outline-none focus:ring-1 focus:ring-sahithyolsav">
                     ${Array.from({length: 13}, (_, i) => `<option value="Stage ${i+1}">Stage ${i+1}</option>`).join('')}
                 </select>
-                <button onclick="saveProgram()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Save</button>`;
+                <button onclick="saveProgram()" class="w-full bg-sahithyolsav text-white py-3 rounded-xl font-bold uppercase shadow-lg">Save Program</button>`;
             openAdminModal();
         }
 
@@ -700,23 +684,23 @@
             closeAdminModal(); adminSub('programs');
         }
 
-        async function deleteProgram(id) { await supabaseClient.from('programs').delete().eq('id', id); adminSub('programs'); }
+        async function deleteProgram(id) { if(confirm("Permanently delete this program?")) { await supabaseClient.from('programs').delete().eq('id', id); adminSub('programs'); } }
 
         async function loadAdminUsers() {
             const { data } = await supabaseClient.from('users_auth').select('*');
             const list = document.getElementById('admin-users-list');
-            if (data && list) list.innerHTML = data.map(u => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center"><span><strong>${u.login_id}</strong> (${u.stage_assigned})</span><button onclick="deleteUser('${u.id}')" class="text-red-500 font-bold underline text-xs">Delete Access</button></div>`).join('');
+            if (data && list) list.innerHTML = data.map(u => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm"><span><strong class="text-sahithyolsav">${u.login_id}</strong> <span class="text-gray-400 mx-2">|</span> ${u.stage_assigned}</span><button onclick="deleteUser('${u.id}')" class="text-red-500 font-bold uppercase text-xs hover:bg-red-50 p-2 rounded">Remove Access</button></div>`).join('');
         }
 
         async function showAddUserModal() {
             const content = document.getElementById('admin-modal-content');
-            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Create Stage Manager</h3>
-                <input type="text" id="nu-id" placeholder="Login ID" class="w-full border p-2 rounded mb-2">
-                <input type="text" id="nu-pwd" placeholder="Password" class="w-full border p-2 rounded mb-2">
-                <select id="nu-stage" class="w-full border p-2 rounded mb-4">
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf uppercase text-sahithyolsav text-center">Create Stage Manager</h3>
+                <input type="text" id="nu-id" placeholder="Login ID / Email" class="w-full border p-3 rounded-xl mb-2 outline-none focus:ring-1 focus:ring-sahithyolsav">
+                <input type="text" id="nu-pwd" placeholder="Password" class="w-full border p-3 rounded-xl mb-3 outline-none focus:ring-1 focus:ring-sahithyolsav">
+                <select id="nu-stage" class="w-full border p-3 rounded-xl mb-4 outline-none focus:ring-1 focus:ring-sahithyolsav">
                     ${Array.from({length: 13}, (_, i) => `<option value="Stage ${i+1}">Stage ${i+1}</option>`).join('')}
                 </select>
-                <button onclick="saveUser()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Create Login</button>`;
+                <button onclick="saveUser()" class="w-full bg-sahithyolsav text-white py-3 rounded-xl font-bold uppercase shadow-lg">Save Credentials</button>`;
             openAdminModal();
         }
 
@@ -729,20 +713,20 @@
             closeAdminModal(); adminSub('users');
         }
 
-        async function deleteUser(id) { await supabaseClient.from('users_auth').delete().eq('id', id); adminSub('users'); }
+        async function deleteUser(id) { if(confirm("Revoke this login?")) { await supabaseClient.from('users_auth').delete().eq('id', id); adminSub('users'); } }
 
         async function fetchAdminResultsApproval() {
             const { data } = await supabaseClient.from('programs').select('*').eq('status', 'completed').eq('results_published', false);
             const list = document.getElementById('admin-results-approval');
             if (data && list) {
-                if(data.length === 0) list.innerHTML = `<div class="p-8 text-center text-gray-400 font-bold">No results waiting for approval</div>`;
-                else list.innerHTML = data.map(p => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center"><div><div class="font-bold">${p.name}</div><div class="text-xs text-sahithyolsav uppercase font-bold">${p.category}</div></div><button onclick="publishPublicResult('${p.id}')" class="bg-green-600 text-white px-4 py-1 rounded-full font-bold text-xs">Approve & Publish</button></div>`).join('');
+                if(data.length === 0) list.innerHTML = `<div class="p-8 text-center text-gray-300 font-bold italic">Queue empty: No programs completed yet</div>`;
+                else list.innerHTML = data.map(p => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm"><div><div class="font-bold">${p.name}</div><div class="text-[10px] text-sahithyolsav uppercase font-bold tracking-widest">${p.category}</div></div><button onclick="publishPublicResult('${p.id}')" class="bg-green-600 text-white px-5 py-2 rounded-full font-bold text-xs uppercase shadow hover:bg-green-700">Approve & Live Publish</button></div>`).join('');
             }
         }
 
         async function publishPublicResult(id) {
             await supabaseClient.from('programs').update({ results_published: true }).eq('id', id);
-            showToast("Result published to public tab", "success"); fetchAdminResultsApproval();
+            showToast("Success: Results are now visible to public", "success"); fetchAdminResultsApproval();
         }
 
         async function processExcel(input) {
@@ -758,9 +742,9 @@
                         const { data: newP } = await supabaseClient.from('programs').insert({ name: row.ProgramName || row.Program, category: row.Category || 'General', stage_id: 'Stage 1' }).select().single();
                         prog = newP;
                     }
-                    await supabaseClient.from('participants').insert({ program_id: prog.id, participation_number: row.ParticipationNumber || row.Participation_Number || row['Participation#'], name: row.Name, sector: row.Sector });
+                    await supabaseClient.from('participants').insert({ program_id: prog.id, participation_number: String(row.ParticipationNumber || row.Participation_Number || row['Participation#']), name: row.Name, sector: row.Sector });
                 }
-                showLoading(false); showToast("Data Imported Successfully", "success");
+                showLoading(false); showToast("Import Finished", "success"); adminSub('participants');
             };
             reader.readAsArrayBuffer(file);
         }
