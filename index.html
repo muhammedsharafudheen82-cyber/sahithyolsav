@@ -775,21 +775,46 @@
         async function openStageProgram(id) {
             showLoading(true);
             const { data: prog } = await supabaseClient.from('programs').select('*').eq('id', id).single();
-            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', id).order('chess_number', { ascending: true });
+            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', id).order('name', { ascending: true });
             showLoading(false);
             if (!prog) return;
             const main = document.getElementById('app-view');
             main.innerHTML = `<div class="bg-slate-950 text-white pt-24 pb-12 sticky top-16 z-40 border-b border-white/10"><div class="container mx-auto px-4"><button onclick="navigate('stage')" class="mb-4 text-orange-500 font-bold flex items-center gap-2 group"><svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Exit</button>
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6"><div><h1 class="text-4xl md:text-5xl font-ssf leading-tight">${prog.name}</h1><p class="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase mt-2">${prog.category} • ${prog.stage_id}</p></div>
                 <div class="flex flex-wrap gap-4"><button onclick="startChessSelection('${prog.id}')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-orange-900/40">Randomize Chess</button><button onclick="finishStageProgram('${prog.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-emerald-900/40">Finalize</button></div></div></div></div>
-                <div class="container mx-auto px-4 py-12 max-w-6xl"><div class="grid gap-6">${(parts || []).map(p => `<div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 flex flex-col lg:flex-row items-center gap-8 relative overflow-hidden group hover:shadow-xl transition-all"><div class="w-full lg:w-1/3"><div class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">REG ID: ${p.participation_number}</div><div class="text-2xl font-black text-slate-900 mb-1">${p.name}</div><div class="text-sm font-bold text-orange-600">${p.sector} Sector</div></div>
-                <div class="w-full lg:w-1/4 flex flex-col items-center justify-center border-l border-r border-slate-50 px-8"><label class="flex items-center gap-3 mb-4 cursor-pointer"><input type="checkbox" ${p.attendance ? 'checked' : ''} onchange="markAttendance('${p.id}', this.checked)" class="w-6 h-6 rounded-lg accent-orange-600"><span class="text-sm font-black uppercase tracking-wider ${p.attendance ? 'text-emerald-600' : 'text-slate-400'}">Present</span></label><div id="scratch-${p.id}" onclick="this.classList.add('scratched')" class="scratch-container ${p.chess_number ? 'scratched' : ''}"><div class="scratch-overlay">Scratch</div><span>${p.chess_number || '?'}</span></div></div>
-                <div class="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4 items-end"><div class="relative"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Score (0-100)</label><input type="number" id="score-${p.id}" value="${p.score || ''}" placeholder="0" class="w-full bg-slate-50 border-0 p-4 rounded-2xl font-black text-2xl text-slate-900 focus:ring-4 focus:ring-orange-500/10 outline-none"></div><div class="relative"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Judge Feedback</label><input type="text" id="fb-${p.id}" value="${p.feedback || ''}" placeholder="Notes..." class="w-full bg-slate-50 border-0 p-4 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-orange-500/10 outline-none"></div><button onclick="updateEntry('${p.id}')" class="md:col-span-2 bg-slate-900 text-white py-3 rounded-2xl font-bold uppercase tracking-widest text-xs">Sync Data</button></div></div>`).join('')}</div></div>`;
+                <div class="container mx-auto px-4 py-12 max-w-6xl">
+                    <div class="grid gap-6">
+                        ${(parts && parts.length > 0) ? parts.map(p => `
+                            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 flex flex-col lg:flex-row items-center gap-8 relative overflow-hidden group hover:shadow-xl transition-all">
+                                <div class="w-full lg:w-1/3">
+                                    <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">REG ID: ${p.participation_number}</div>
+                                    <div class="text-2xl font-black text-slate-900 mb-1">${p.name}</div>
+                                    <div class="text-sm font-bold text-orange-600">${p.sector} Sector</div>
+                                </div>
+                                <div class="w-full lg:w-1/4 flex flex-col items-center justify-center border-l border-r border-slate-50 px-8">
+                                    <label class="flex items-center gap-3 mb-4 cursor-pointer">
+                                        <input type="checkbox" ${p.attendance ? 'checked' : ''} onchange="markAttendance('${p.id}', this.checked)" class="w-6 h-6 rounded-lg accent-orange-600">
+                                        <span class="text-sm font-black uppercase tracking-wider ${p.attendance ? 'text-emerald-600' : 'text-slate-400'}">Present</span>
+                                    </label>
+                                    <div id="scratch-${p.id}" onclick="this.classList.add('scratched')" class="scratch-container ${p.chess_number ? 'scratched' : ''}">
+                                        <div class="scratch-overlay">Scratch</div>
+                                        <span>${p.chess_number || '?'}</span>
+                                    </div>
+                                </div>
+                                <div class="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                    <div class="relative"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Score (0-100)</label><input type="number" id="score-${p.id}" value="${p.score || ''}" placeholder="0" class="w-full bg-slate-50 border-0 p-4 rounded-2xl font-black text-2xl text-slate-900 focus:ring-4 focus:ring-orange-500/10 outline-none"></div>
+                                    <div class="relative"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Judge Feedback</label><input type="text" id="fb-${p.id}" value="${p.feedback || ''}" placeholder="Notes..." class="w-full bg-slate-50 border-0 p-4 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-orange-500/10 outline-none"></div>
+                                    <button onclick="updateEntry('${p.id}')" class="md:col-span-2 bg-slate-900 text-white py-3 rounded-2xl font-bold uppercase tracking-widest text-xs">Sync Data</button>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="py-20 text-center text-slate-400 italic bg-white rounded-3xl shadow-sm border border-dashed border-slate-200">No participants registered for this event yet.</div>'}
+                    </div>
+                </div>`;
         }
 
         async function startChessSelection(progId) {
             const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).eq('attendance', true);
-            if(!parts || !parts.length) return showToast("No present participants", "error");
+            if(!parts || parts.length === 0) return showToast("No present participants", "error");
             showLoading(true);
             let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, parts.length).sort(() => Math.random() - 0.5);
             for (let i = 0; i < parts.length; i++) { await supabaseClient.from('participants').update({ chess_number: letters[i] }).eq('id', parts[i].id); }
