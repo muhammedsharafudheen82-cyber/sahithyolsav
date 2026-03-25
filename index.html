@@ -787,7 +787,7 @@
             showLoading(false);
             if (!prog) return;
 
-            const hasCodes = parts.some(p => p.chess_number);
+            const hasCodes = (parts || []).some(p => p.chess_number);
 
             const main = document.getElementById('app-view');
             main.innerHTML = `<div class="bg-slate-950 text-white pt-24 pb-12 sticky top-16 z-40 border-b border-white/10"><div class="container mx-auto px-4">
@@ -869,23 +869,32 @@
             await Promise.all(updates);
             
             showLoading(false); 
-            // Wait slightly for DB propagation before re-fetching
-            setTimeout(async () => {
+            // Fetch updated data immediately to confirm the state
+            const { data: verifiedParts } = await supabaseClient.from('participants').select('chess_number').eq('program_id', progId);
+            const verified = (verifiedParts || []).some(p => p.chess_number);
+
+            if (verified) {
                 await openStageProgram(progId); 
                 showToast("Chess letters assigned! Reveal them with participants.");
-            }, 500);
+            } else {
+                showToast("Sync issue, please try assigning codes again.", "error");
+            }
         }
 
         async function updateEntry(partId) {
-            const score = document.getElementById(`score-${partId}`).value;
-            const fb = document.getElementById(`fb-${partId}`).value;
+            const scoreInput = document.getElementById(`score-${partId}`);
+            const feedbackInput = document.getElementById(`fb-${partId}`);
+            if(!scoreInput) return;
+            
+            const score = scoreInput.value;
+            const fb = feedbackInput.value;
             const { error } = await supabaseClient.from('participants').update({ score: score || 0, feedback: fb }).eq('id', partId);
             if (!error) showToast("Scores synchronized");
+            else showToast("Sync failed", "error");
         }
 
         async function markAttendance(id, present, progId) { 
             await supabaseClient.from('participants').update({ attendance: present }).eq('id', id); 
-            // Reactive UI: only update the data locally or re-fetch header state
             showToast(present ? "Marked Present" : "Marked Absent");
         }
 
