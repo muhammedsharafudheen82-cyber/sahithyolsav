@@ -584,13 +584,20 @@
             if (data && list) list.innerHTML = data.map(p => `<div class="flex justify-between items-center p-4 border-b"><div><div class="font-bold">${p.name} (#${p.participation_number})</div><div class="text-xs text-slate-400 uppercase font-bold">${p.programs?.name || 'No Program'} | ${p.sector} Sector</div></div><button onclick="deleteParticipant('${p.id}')" class="text-red-500 font-bold text-xs">Delete</button></div>`).join('');
         }
 
-        function showAddParticipantModal() {
+        async function showAddParticipantModal() {
+            showLoading(true);
+            const { data: progs } = await supabaseClient.from('programs').select('id, name, category').order('name');
+            showLoading(false);
+
             const content = document.getElementById('admin-modal-content');
             content.innerHTML = `<h3 class="text-2xl font-black mb-6">Manual Participant Entry</h3>
                 <input type="text" id="p-name" placeholder="Full Name" class="w-full bg-slate-50 border-0 p-4 rounded-2xl mb-4">
                 <input type="text" id="p-no" placeholder="Registration Number" class="w-full bg-slate-50 border-0 p-4 rounded-2xl mb-4">
                 <input type="text" id="p-sector" placeholder="Sector" class="w-full bg-slate-50 border-0 p-4 rounded-2xl mb-4">
-                <input type="text" id="p-prog-id" placeholder="Program UUID (Optional)" class="w-full bg-slate-50 border-0 p-4 rounded-2xl mb-8">
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-2 block mb-2">Select Program</label>
+                <select id="p-prog-id" class="w-full bg-slate-50 border-0 p-4 rounded-2xl mb-8">
+                    ${(progs || []).map(p => `<option value="${p.id}">${p.name} (${p.category})</option>`).join('')}
+                </select>
                 <button onclick="addParticipantManual()" class="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold">Save Data</button>`;
             openAdminModal();
         }
@@ -599,8 +606,8 @@
             const name = document.getElementById('p-name').value;
             const participation_number = document.getElementById('p-no').value;
             const sector = document.getElementById('p-sector').value;
-            const program_id = document.getElementById('p-prog-id').value || null;
-            if(!name || !participation_number) return;
+            const program_id = document.getElementById('p-prog-id').value;
+            if(!name || !participation_number || !program_id) return;
             showLoading(true);
             await supabaseClient.from('participants').insert({ name, participation_number, sector, program_id });
             showLoading(false); closeAdminModal(); adminSub('participants');
