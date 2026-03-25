@@ -495,16 +495,12 @@
             const posterArea = document.getElementById('poster-download-area');
             const bgImage = `poster${posterNum}.jpeg`;
             
-            // Layout dimensions: 1080x1350
             posterArea.innerHTML = `
                 <div style="width: 1080px; height: 1350px; position: relative; background-image: url('${bgImage}'); background-size: cover; font-family: 'Plus Jakarta Sans', sans-serif;">
-                    <!-- Header Section -->
                     <div style="position: absolute; top: 120px; width: 100%; text-align: center;">
                         <div style="font-family: 'CooperBlack'; font-size: 80px; color: #1e293b; text-transform: uppercase;">${prog.name}</div>
                         <div style="font-weight: 800; font-size: 30px; color: #f97316; letter-spacing: 0.5em; margin-top: 10px; text-transform: uppercase;">${prog.category}</div>
                     </div>
-                    
-                    <!-- Winners Section -->
                     <div style="position: absolute; top: 450px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 40px;">
                         ${winners.map((p, i) => `
                             <div style="width: 800px; padding: 30px 50px; background: rgba(255,255,255,0.9); border-radius: 40px; display: flex; align-items: center; justify-content: space-between; border-left: 15px solid #f97316; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
@@ -519,21 +515,14 @@
                             </div>
                         `).join('')}
                     </div>
-
-                    <!-- Footer Info -->
                     <div style="position: absolute; bottom: 80px; width: 100%; text-align: center; color: white; font-weight: 700; font-size: 24px; letter-spacing: 0.2em; text-transform: uppercase;">
                         SSF NILAMBUR DIVISION • 2025
                     </div>
                 </div>
             `;
 
-            // Wait for images to load before rendering
             setTimeout(() => {
-                html2canvas(posterArea, {
-                    scale: 1, // Standard resolution (1080x1350)
-                    useCORS: true,
-                    logging: false
-                }).then(canvas => {
+                html2canvas(posterArea, { scale: 1, useCORS: true, logging: false }).then(canvas => {
                     const link = document.createElement('a');
                     link.download = `Sahithyolsav_${prog.name}_Result.jpeg`;
                     link.href = canvas.toDataURL('image/jpeg', 1.0);
@@ -543,7 +532,7 @@
                 }).catch(err => {
                     console.error(err);
                     showLoading(false);
-                    showToast("Download failed. Image asset missing.", "error");
+                    showToast("Download failed.", "error");
                 });
             }, 1000);
         }
@@ -594,7 +583,7 @@
                     <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100"><input type="text" id="p-search" oninput="fetchAdminParticipants()" placeholder="Search..." class="w-full bg-slate-50 border-0 p-4 rounded-2xl outline-none mb-8"><div id="admin-participants-list" class="space-y-1"></div></div>`;
                 fetchAdminParticipants();
             } else if (view === 'news') {
-                main.innerHTML = `<div class="flex justify-between items-center mb-10"><h2 class="text-4xl font-black">Announcements</h2><button onclick="showAddNewsModal()" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold">New Post</button></div><div id="admin-news-list" class="grid gap-3"></div>`;
+                main.innerHTML = `<div class="flex justify-between items-center mb-10"><h2 class="text-4xl font-black text-slate-900">Announcements</h2><button onclick="showAddNewsModal()" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold">New Post</button></div><div id="admin-news-list" class="grid gap-3"></div>`;
                 fetchAdminNews();
             } else if (view === 'gallery') {
                 main.innerHTML = `<div class="flex justify-between items-center mb-10"><h2 class="text-4xl font-black">Gallery</h2><button onclick="showAddMediaModal('image')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold">Add Photo</button></div><div id="admin-gallery-list" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>`;
@@ -610,8 +599,6 @@
                 loadAdminUsers();
             }
         }
-
-        // --- ADMIN HELPER FUNCTIONS ---
 
         async function fetchAdminPrograms() {
             const { data } = await supabaseClient.from('programs').select('*').order('name');
