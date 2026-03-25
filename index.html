@@ -295,14 +295,17 @@
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
+            if (!container) return;
             const toast = document.createElement('div');
             const bg = type === 'success' ? 'bg-slate-900 border-l-4 border-emerald-500' : 'bg-red-900 border-l-4 border-red-500';
             toast.className = `${bg} text-white px-6 py-4 rounded-xl shadow-2xl min-w-[300px] flex justify-between items-center animate-in slide-in-from-right`;
             toast.innerHTML = `<span>${message}</span><button onclick="this.parentElement.remove()" class="ml-4 opacity-50 hover:opacity-100">&times;</button>`;
             container.appendChild(toast);
             setTimeout(() => {
-                toast.classList.add('animate-out', 'fade-out', 'slide-out-to-right');
-                setTimeout(() => toast.remove(), 400);
+                if (toast.parentElement) {
+                    toast.classList.add('animate-out', 'fade-out', 'slide-out-to-right');
+                    setTimeout(() => toast.remove(), 400);
+                }
             }, 4000);
         }
 
@@ -467,6 +470,39 @@
             }
         }
 
+        async function showDetailedResult(id) {
+            showLoading(true);
+            const { data: prog } = await supabaseClient.from('programs').select('*').eq('id', id).single();
+            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', id).order('score', { ascending: false });
+            showLoading(false);
+
+            if (!prog) return;
+
+            const content = document.getElementById('admin-modal-content');
+            content.innerHTML = `
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-ssf text-orange-600 mb-2">${prog.name}</h2>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">${prog.category} Winners</p>
+                </div>
+                <div class="space-y-4">
+                    ${(parts || []).slice(0, 3).map((p, i) => `
+                        <div class="flex items-center gap-6 p-6 rounded-[2rem] ${i === 0 ? 'bg-orange-50 border-2 border-orange-200' : 'bg-slate-50'}">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center font-black text-xl ${i === 0 ? 'bg-orange-600 text-white' : 'bg-slate-200 text-slate-500'}">
+                                ${i + 1}
+                            </div>
+                            <div>
+                                <div class="font-black text-lg text-slate-900">${p.name}</div>
+                                <div class="text-xs font-bold text-slate-500 uppercase tracking-tight">${p.sector} Sector</div>
+                            </div>
+                            <div class="ml-auto text-2xl font-black text-orange-600">${p.score}</div>
+                        </div>
+                    `).join('')}
+                    ${parts.length === 0 ? '<p class="text-center text-slate-400 italic py-10">Waiting for official tally...</p>' : ''}
+                </div>
+            `;
+            openAdminModal();
+        }
+
         async function loadTeamStatus() {
             const { data } = await supabaseClient.from('team_points').select('*').order('points', { ascending: false });
             const body = document.getElementById('points-body');
@@ -493,7 +529,6 @@
             
             showLoading(true);
             
-            // Fixed Admin bypass for development (per requirement)
             if ((id === 'admin' && pwd === 'nilambur123') || (id === 'sharafunbr@gmail.com' && pwd === '123456')) {
                 currentUser = { role: 'admin', login_id: id };
                 closeLoginModal();
@@ -530,13 +565,16 @@
                 </div>
                 <div class="container mx-auto px-4 py-16 max-w-5xl">
                     <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Assigned Programs</h3>
-                    <div id="stage-programs-list" class="grid gap-4"></div>
+                    <div id="stage-programs-list" class="grid gap-4">
+                        <div class="py-20 text-center animate-pulse text-slate-400">Loading your stage events...</div>
+                    </div>
                 </div>
             `;
         }
 
         async function fetchStagePrograms() {
-            const { data } = await supabaseClient.from('programs').select('*').eq('stage_id', currentUser.stage_assigned).order('date_time', { ascending: true });
+            if (!currentUser) return;
+            const { data } = await supabaseClient.from('programs').select('*').eq('stage_id', currentUser.stage_assigned).order('status', { ascending: false });
             const list = document.getElementById('stage-programs-list');
             if (data && list) {
                 list.innerHTML = data.map(p => `
@@ -552,11 +590,12 @@
                         </div>
                         <div class="flex items-center gap-4">
                             <span class="text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full ${p.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}">
-                                ${p.status}
+                                ${p.status === 'pending' ? 'Ready' : p.status}
                             </span>
-                            <svg class="w-5 h-5 text-slate-300 group-hover:text-orange-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
+                            <svg class="w-5 h-5 text-slate-300 group-hover:text-orange-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </div>
                     </div>`).join('');
+                if (data.length === 0) list.innerHTML = `<div class="py-20 text-center text-slate-400 uppercase tracking-widest text-xs font-bold">No programs assigned to this stage</div>`;
             }
         }
 
@@ -566,29 +605,34 @@
             const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', id).order('chess_number', { ascending: true });
             showLoading(false);
             
+            if (!prog) {
+                showToast("Could not load program details", "error");
+                return;
+            }
+
             const main = document.getElementById('app-view');
             main.innerHTML = `
                 <div class="bg-slate-950 text-white pt-24 pb-12 sticky top-16 z-40 border-b border-white/10">
                     <div class="container mx-auto px-4">
                         <button onclick="navigate('stage')" class="mb-4 text-orange-500 font-bold flex items-center gap-2 group">
-                            <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"></path></svg> 
+                            <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> 
                             Exit to Dashboard
                         </button>
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                             <div>
-                                <h1 class="text-4xl md:text-5xl font-ssf">${prog.name}</h1>
+                                <h1 class="text-4xl md:text-5xl font-ssf leading-tight">${prog.name}</h1>
                                 <p class="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase mt-2">${prog.category} • ${prog.stage_id}</p>
                             </div>
-                            <div class="flex gap-4">
-                                <button onclick="startChessSelection('${prog.id}')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-orange-900/40 hover:bg-orange-700 active:scale-95 transition-all">Randomize Chess Reveal</button>
-                                <button onclick="finishStageProgram('${prog.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-emerald-900/40 hover:bg-emerald-700 active:scale-95 transition-all">Finalize & Submit</button>
+                            <div class="flex flex-wrap gap-4">
+                                <button onclick="startChessSelection('${prog.id}')" class="bg-orange-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-orange-900/40 hover:bg-orange-700 active:scale-95 transition-all text-sm">Randomize Chess Reveal</button>
+                                <button onclick="finishStageProgram('${prog.id}')" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-emerald-900/40 hover:bg-emerald-700 active:scale-95 transition-all text-sm">Finalize & Submit</button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="container mx-auto px-4 py-12 max-w-6xl">
                     <div class="grid gap-6">
-                        ${parts.map(p => `
+                        ${(parts || []).map(p => `
                             <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 flex flex-col lg:flex-row items-center gap-8 relative overflow-hidden group hover:shadow-xl transition-all">
                                 <div class="w-full lg:w-1/3">
                                     <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">REG ID: ${p.participation_number}</div>
@@ -621,13 +665,14 @@
                                 </div>
                             </div>
                         `).join('')}
+                        ${parts.length === 0 ? '<div class="py-20 text-center text-slate-400 italic">No participants registered for this event.</div>' : ''}
                     </div>
                 </div>`;
         }
 
         async function startChessSelection(progId) {
             const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).eq('attendance', true);
-            if(!parts.length) return showToast("No participants marked as present", "error");
+            if(!parts || !parts.length) return showToast("No participants marked as present", "error");
             
             showLoading(true);
             let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, parts.length).sort(() => Math.random() - 0.5);
@@ -640,8 +685,12 @@
         }
 
         async function updateEntry(partId) {
-            const score = document.getElementById(`score-${partId}`).value;
-            const fb = document.getElementById(`fb-${partId}`).value;
+            const scoreInput = document.getElementById(`score-${partId}`);
+            const feedbackInput = document.getElementById(`fb-${partId}`);
+            if (!scoreInput) return;
+
+            const score = scoreInput.value;
+            const fb = feedbackInput.value;
             
             const { error } = await supabaseClient.from('participants').update({ 
                 score: score || 0, 
@@ -676,19 +725,19 @@
                             <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase">Division HQ</p>
                         </div>
                         <nav class="flex flex-col gap-2">
-                            <button onclick="adminSub('programs')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group">
+                            <button onclick="adminSub('programs')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group text-left">
                                 <div class="w-2 h-2 rounded-full bg-orange-600 group-hover:scale-150 transition-transform"></div> Events
                             </button>
-                            <button onclick="adminSub('participants')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group">
+                            <button onclick="adminSub('participants')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group text-left">
                                 <div class="w-2 h-2 rounded-full bg-slate-700 group-hover:bg-orange-600 transition-colors"></div> Participants
                             </button>
-                            <button onclick="adminSub('news')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group">
+                            <button onclick="adminSub('news')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group text-left">
                                 <div class="w-2 h-2 rounded-full bg-slate-700 group-hover:bg-orange-600 transition-colors"></div> Announcements
                             </button>
-                            <button onclick="adminSub('results')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group">
+                            <button onclick="adminSub('results')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group text-left">
                                 <div class="w-2 h-2 rounded-full bg-slate-700 group-hover:bg-orange-600 transition-colors"></div> Approvals
                             </button>
-                            <button onclick="adminSub('users')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group">
+                            <button onclick="adminSub('users')" class="flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-white/5 font-bold transition-all text-sm group text-left">
                                 <div class="w-2 h-2 rounded-full bg-slate-700 group-hover:bg-orange-600 transition-colors"></div> Managers
                             </button>
                         </nav>
@@ -713,7 +762,7 @@
                 fetchAdminPrograms();
             } else if (view === 'participants') {
                 main.innerHTML = `
-                    <h2 class="text-4xl font-black text-slate-900 mb-10">Database</h2>
+                    <h2 class="text-4xl font-black text-slate-900 mb-10 text-center lg:text-left">Database</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                         <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
                             <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
@@ -801,12 +850,13 @@
             if (!track) return;
             
             const interval = setInterval(() => {
-                if (!document.getElementById('carousel-track')) {
+                const checkTrack = document.getElementById('carousel-track');
+                if (!checkTrack) {
                     clearInterval(interval);
                     return;
                 }
                 i = (i + 1) % 2;
-                track.style.transform = `translateX(-${i * 100}%)`;
+                checkTrack.style.transform = `translateX(-${i * 100}%)`;
             }, 6000);
         }
 
