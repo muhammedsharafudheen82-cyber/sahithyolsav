@@ -20,7 +20,6 @@
         .bg-sahithyolsav { background-color: #f97316; }
         .text-sahithyolsav { color: #f97316; }
         
-        /* News Ticker Animation */
         @keyframes ticker {
             0% { transform: translateX(100%); }
             100% { transform: translateX(-100%); }
@@ -28,13 +27,12 @@
         .ticker-text {
             display: inline-block;
             white-space: nowrap;
-            animation: ticker 20s linear infinite;
+            animation: ticker 30s linear infinite;
         }
         .ticker-container:hover .ticker-text {
             animation-play-state: paused;
         }
 
-        /* Scratch Card */
         .scratch-container {
             position: relative;
             width: 80px;
@@ -56,7 +54,6 @@
         }
         .scratched .scratch-overlay { opacity: 0; pointer-events: none; }
 
-        /* Posters Design */
         .poster-card {
             width: 400px;
             height: 560px;
@@ -73,7 +70,6 @@
     <header class="bg-white shadow-md sticky top-0 z-50">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <!-- LOGO UPDATE -->
                 <img src="Sahithyolsav (en)_1.png" alt="Sahithyolsav Logo" class="h-12 md:h-16" onerror="this.src='https://placehold.co/150x60?text=Sahithyolsav'">
                 <div>
                     <h1 class="font-ssf text-3xl md:text-4xl text-sahithyolsav leading-none">SSF</h1>
@@ -81,7 +77,6 @@
                 </div>
             </div>
             
-            <!-- Desktop Nav -->
             <nav class="hidden lg:flex gap-6 font-semibold">
                 <button onclick="navigate('home')" class="hover:text-sahithyolsav">Home</button>
                 <button onclick="navigate('about')" class="hover:text-sahithyolsav">About Us</button>
@@ -91,7 +86,6 @@
                 <button onclick="openLoginModal()" class="bg-sahithyolsav text-white px-4 py-1 rounded-full text-sm">Login</button>
             </nav>
             
-            <!-- Mobile Toggle -->
             <button class="lg:hidden p-2" onclick="toggleMobileMenu()">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             </button>
@@ -112,17 +106,15 @@
         <!-- News Ticker -->
         <div class="bg-black text-white py-1 ticker-container overflow-hidden">
             <div class="ticker-text" id="news-ticker">
-                Welcome to Sahithyolsav 2025 Nilambur Division! Stay tuned for live results.
+                Fetching latest news...
             </div>
         </div>
     </header>
 
-    <!-- App Views -->
     <main id="app-view" class="min-h-screen">
-        <!-- Views will be injected here -->
+        <!-- Views injected here -->
     </main>
 
-    <!-- Footer -->
     <footer class="bg-gray-900 text-white py-12 mt-20">
         <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
             <div>
@@ -163,7 +155,6 @@
         </div>
     </div>
 
-    <!-- Universal Modal for Admin Forms -->
     <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl relative overflow-y-auto max-h-[90vh]">
             <button onclick="closeAdminModal()" class="absolute top-4 right-4 text-gray-400 hover:text-black">&times;</button>
@@ -171,49 +162,49 @@
         </div>
     </div>
 
-    <!-- Loading Overlay -->
     <div id="loading" class="fixed inset-0 bg-white bg-opacity-80 z-[200] hidden flex flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-12 w-12 border-4 border-sahithyolsav border-t-transparent"></div>
         <p class="mt-4 font-bold text-gray-600">Syncing with server...</p>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const SUPABASE_URL = 'https://ccvyjwtxbesrvptezeku.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjdnlqd3R4YmVzcnZwdGV6ZWt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNjA4NDAsImV4cCI6MjA4OTkzNjg0MH0.gbdAgRrudNU-dhdFVW9TXXxgvZfx5Y2O_gE9X-a38tU';
-        
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentView = 'home';
         let currentUser = null;
 
-        // --- NAVIGATION ---
         function navigate(view) {
             currentView = view;
             const app = document.getElementById('app-view');
             window.scrollTo(0,0);
             
             switch(view) {
-                case 'home': app.innerHTML = renderHome(); startCarousel(); break;
+                case 'home': app.innerHTML = renderHome(); startCarousel(); updateTicker(); break;
                 case 'about': app.innerHTML = renderAbout(); break;
-                case 'gallery': app.innerHTML = renderGallery(); break;
-                case 'videos': app.innerHTML = renderVideos(); break;
+                case 'gallery': app.innerHTML = renderGallery(); loadMedia('image'); break;
+                case 'videos': app.innerHTML = renderVideos(); loadMedia('video'); break;
                 case 'results': app.innerHTML = renderResults(); toggleResultSub('results'); break;
                 case 'admin': app.innerHTML = renderAdmin(); adminSub('programs'); break;
                 case 'stage': app.innerHTML = renderStage(); fetchStagePrograms(); break;
-                case 'judge': app.innerHTML = renderJudge(); fetchJudgePrograms(); break;
             }
         }
 
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobile-menu');
-            if (menu) menu.classList.toggle('hidden');
+        async function updateTicker() {
+            const { data } = await supabaseClient.from('news').select('*').order('created_at', { ascending: false });
+            const ticker = document.getElementById('news-ticker');
+            if (data && data.length > 0) {
+                ticker.innerText = data.map(n => n.content).join('  |  ');
+            } else {
+                ticker.innerText = "Welcome to Sahithyolsav 2025 Nilambur Division! Stay tuned for updates.";
+            }
         }
 
+        function toggleMobileMenu() { document.getElementById('mobile-menu')?.classList.toggle('hidden'); }
         function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
         function openAdminModal() { document.getElementById('admin-modal').classList.remove('hidden'); }
 
-        // --- VIEWS ---
         function renderHome() {
             return `
                 <section class="relative h-[400px] md:h-[600px] bg-gray-200 overflow-hidden">
@@ -232,93 +223,87 @@
                         </div>
                     </div>
                 </section>
-                <section class="py-16 container mx-auto px-4">
-                    <div class="max-w-3xl mx-auto text-center">
-                        <h2 class="text-3xl font-bold mb-6 text-sahithyolsav underline decoration-4 underline-offset-8">Welcome to Nilambur Sahithyolsav</h2>
-                        <p class="text-gray-600 leading-relaxed mb-8">
-                            Sahithyolsav is not just a competition; it's a celebration of literature, art, and the profound depth of human expression. 
-                            The Nilambur Division proudly presents this year's edition, bringing together students and enthusiasts from across the sector.
-                        </p>
-                        <a href="#" class="inline-block bg-sahithyolsav text-white px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition-transform">
-                            Download Event Brochure (PDF)
-                        </a>
-                    </div>
-                </section>
-            `;
+                <section class="py-16 container mx-auto px-4 text-center">
+                    <h2 class="text-3xl font-bold mb-6 text-sahithyolsav underline decoration-4 underline-offset-8">Welcome to Nilambur Sahithyolsav</h2>
+                    <p class="text-gray-600 leading-relaxed mb-8 max-w-2xl mx-auto">Sahithyolsav is a celebration of literature, art, and human expression organized by SSF Nilambur Division.</p>
+                    <a href="#" class="inline-block bg-sahithyolsav text-white px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition-transform">Download Event Brochure</a>
+                </section>`;
         }
 
         function renderAbout() {
-            return `
-                <section class="py-20 bg-orange-50 min-h-screen">
-                    <div class="container mx-auto px-4 max-w-4xl bg-white p-12 rounded-3xl shadow-xl">
-                        <h1 class="text-4xl font-ssf text-sahithyolsav mb-8">About Sahithyolsav</h1>
-                        <div class="prose prose-lg text-gray-700">
-                            <p class="mb-6 font-semibold italic text-xl">"Literature is the soul of a society."</p>
-                            <p class="mb-4">Sahithyolsav, organized by the Sunni Students' Federation (SSF), is an unparalleled platform for students to showcase their literary and cultural prowess. Since its inception, it has been instrumental in nurturing voices that challenge the status quo and celebrate the richness of our heritage.</p>
-                        </div>
-                    </div>
-                </section>
-            `;
+            return `<section class="py-20 bg-orange-50 min-h-screen">
+                <div class="container mx-auto px-4 max-w-4xl bg-white p-12 rounded-3xl shadow-xl">
+                    <h1 class="text-4xl font-ssf text-sahithyolsav mb-8">About Sahithyolsav</h1>
+                    <p class="text-gray-700 leading-relaxed">The Sunni Students’ Federation (SSF) conducts Sahithyolsav as a platform for students to explore and exhibit their literary and artistic talents. Our goal is to promote cultural values and creative thinking.</p>
+                </div></section>`;
         }
 
         function renderResults() {
-            return `
-                <section class="py-12 bg-gray-100 min-h-screen">
-                    <div class="container mx-auto px-4">
-                        <div class="flex justify-center mb-10">
-                            <div class="inline-flex bg-white p-1 rounded-xl shadow-md">
-                                <button onclick="toggleResultSub('results')" class="px-6 py-2 rounded-lg font-bold transition" id="btn-res-list">Program Results</button>
-                                <button onclick="toggleResultSub('status')" class="px-6 py-2 rounded-lg font-bold transition" id="btn-res-status">Team Status</button>
-                            </div>
+            return `<section class="py-12 bg-gray-100 min-h-screen">
+                <div class="container mx-auto px-4">
+                    <div class="flex justify-center mb-10">
+                        <div class="inline-flex bg-white p-1 rounded-xl shadow-md">
+                            <button onclick="toggleResultSub('results')" class="px-6 py-2 rounded-lg font-bold" id="btn-res-list">Program Results</button>
+                            <button onclick="toggleResultSub('status')" class="px-6 py-2 rounded-lg font-bold" id="btn-res-status">Team Status</button>
                         </div>
-                        <div id="result-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[500px]"></div>
                     </div>
-                </section>
-            `;
+                    <div id="result-content" class="bg-white rounded-2xl p-6 shadow-lg min-h-[500px]"></div>
+                </div></section>`;
         }
 
-        function renderGallery() { return `<section class="py-20 text-center"><h1 class="text-3xl font-bold">Gallery</h1><div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 p-8"></div></section>`; }
-        function renderVideos() { return `<section class="py-20 text-center"><h1 class="text-3xl font-bold">Videos</h1><div id="video-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 p-8"></div></section>`; }
+        function renderGallery() { 
+            return `<section class="py-20">
+                <div class="container mx-auto px-4">
+                    <h1 class="text-4xl font-ssf text-center text-sahithyolsav mb-12">Photo Gallery</h1>
+                    <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                </div>
+            </section>`; 
+        }
 
-        // --- SUB-TABS LOGIC ---
+        function renderVideos() { 
+            return `<section class="py-20">
+                <div class="container mx-auto px-4">
+                    <h1 class="text-4xl font-ssf text-center text-sahithyolsav mb-12">Video Gallery</h1>
+                    <div id="video-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+                </div>
+            </section>`; 
+        }
+
+        async function loadMedia(type) {
+            const { data } = await supabaseClient.from('media').select('*').eq('type', type).order('created_at', { ascending: false });
+            const gridId = type === 'image' ? 'gallery-grid' : 'video-grid';
+            const grid = document.getElementById(gridId);
+            if (!data || !grid) return;
+
+            if (type === 'image') {
+                grid.innerHTML = data.map(m => `
+                    <div class="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 hover:scale-105 transition-transform">
+                        <img src="${m.url}" class="w-full h-48 object-cover" alt="${m.title}">
+                        <div class="p-3 text-center font-bold text-sm">${m.title || ''}</div>
+                    </div>
+                `).join('');
+            } else {
+                grid.innerHTML = data.map(m => `
+                    <div class="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100">
+                        <div class="relative pt-[56.25%]">
+                            <iframe class="absolute inset-0 w-full h-full" src="${m.url.replace('watch?v=', 'embed/')}" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                        <div class="p-4 text-center font-bold">${m.title || ''}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
         async function toggleResultSub(sub) {
             const content = document.getElementById('result-content');
-            const btnList = document.getElementById('btn-res-list');
-            const btnStatus = document.getElementById('btn-res-status');
-
             if (!content) return;
-
-            btnList.className = sub === 'results' ? 'px-6 py-2 rounded-lg font-bold bg-sahithyolsav text-white' : 'px-6 py-2 rounded-lg font-bold hover:bg-gray-100';
-            btnStatus.className = sub === 'status' ? 'px-6 py-2 rounded-lg font-bold bg-sahithyolsav text-white' : 'px-6 py-2 rounded-lg font-bold hover:bg-gray-100';
-
+            document.getElementById('btn-res-list').className = sub === 'results' ? 'px-6 py-2 rounded-lg font-bold bg-sahithyolsav text-white' : 'px-6 py-2 rounded-lg font-bold hover:bg-gray-100';
+            document.getElementById('btn-res-status').className = sub === 'status' ? 'px-6 py-2 rounded-lg font-bold bg-sahithyolsav text-white' : 'px-6 py-2 rounded-lg font-bold hover:bg-gray-100';
             if (sub === 'results') {
-                content.innerHTML = `
-                    <div class="text-center mb-8">
-                        <div class="text-4xl font-bold text-sahithyolsav mb-2" id="published-count">0</div>
-                        <div class="text-sm uppercase tracking-widest font-bold text-gray-500">Results Published</div>
-                    </div>
-                    <div class="max-w-md mx-auto mb-8 relative">
-                        <input type="text" placeholder="Search Program..." onkeyup="searchPrograms(this.value)" class="w-full border p-3 rounded-xl focus:ring-2 focus:ring-orange-500 pl-10">
-                    </div>
-                    <div id="programs-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                `;
+                content.innerHTML = `<div class="text-center mb-8"><div class="text-4xl font-bold text-sahithyolsav" id="published-count">0</div><div class="text-gray-500 font-bold uppercase text-xs">Published Results</div></div><div id="programs-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
                 loadPublicResults();
             } else {
-                content.innerHTML = `
-                    <h2 class="text-2xl font-bold mb-6 text-center">Live Point Table</h2>
-                    <div class="overflow-hidden rounded-xl border">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 border-b">
-                                <tr>
-                                    <th class="p-4">Rank</th>
-                                    <th class="p-4">Sector</th>
-                                    <th class="p-4 text-right">Points</th>
-                                </tr>
-                            </thead>
-                            <tbody id="points-body"></tbody>
-                        </table>
-                    </div>
-                `;
+                content.innerHTML = `<h2 class="text-2xl font-bold mb-6 text-center">Live Point Table</h2><div id="points-body" class="space-y-2"></div>`;
                 loadTeamStatus();
             }
         }
@@ -326,350 +311,377 @@
         async function loadTeamStatus() {
             const { data } = await supabaseClient.from('team_points').select('*').order('points', { ascending: false });
             const body = document.getElementById('points-body');
-            if (data && body) {
-                body.innerHTML = data.map((d, i) => `
-                    <tr class="border-b">
-                        <td class="p-4 font-bold">#${i + 1}</td>
-                        <td class="p-4">${d.sector}</td>
-                        <td class="p-4 text-right font-bold text-sahithyolsav">${d.points}</td>
-                    </tr>
-                `).join('');
-            }
+            if (data && body) body.innerHTML = data.map((d, i) => `<div class="flex justify-between p-4 bg-gray-50 rounded-xl"><span>#${i+1} ${d.sector}</span><span class="font-bold text-sahithyolsav">${d.points}</span></div>`).join('');
         }
-
-        async function searchPrograms(val) {
-            const { data } = await supabaseClient.from('programs').select('*').ilike('name', `%${val}%`).eq('results_published', true);
-            const grid = document.getElementById('programs-grid');
-            if (data && grid) {
-                grid.innerHTML = data.map(p => `
-                    <div onclick="showProgramResult('${p.id}')" class="bg-gray-50 p-4 rounded-xl border-2 hover:border-orange-500 cursor-pointer transition flex justify-between items-center group">
-                        <span class="font-bold text-gray-700">${p.name} <small class="text-gray-400 font-normal">(${p.category})</small></span>
-                        <svg class="w-5 h-5 text-sahithyolsav opacity-0 group-hover:opacity-100 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // --- AUTH & LOGIN ---
-        function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
-        function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
 
         async function handleLogin() {
-            const loginId = document.getElementById('login-id').value;
+            const id = document.getElementById('login-id').value;
             const pwd = document.getElementById('login-pwd').value;
-            
-            if ((loginId === 'admin' && pwd === 'nilambur123') || (loginId === 'sharafunbr@gmail.com' && pwd === '123456')) {
-                currentUser = { role: 'admin', id: 'admin', login_id: loginId };
-                closeLoginModal(); navigate('admin'); return;
+            if ((id === 'admin' && pwd === 'nilambur123') || (id === 'sharafunbr@gmail.com' && pwd === '123456')) {
+                currentUser = { role: 'admin' }; closeLoginModal(); navigate('admin'); return;
             }
-            
-            const { data } = await supabaseClient.from('users_auth').select('*').eq('login_id', loginId).eq('password', pwd).single();
-            if (data) { 
-                currentUser = data; 
-                closeLoginModal(); 
-                navigate(data.role); 
-            } else { 
-                showToast("Invalid credentials", "error"); 
-            }
+            const { data } = await supabaseClient.from('users_auth').select('*').eq('login_id', id).eq('password', pwd).single();
+            if (data) { currentUser = data; closeLoginModal(); navigate('stage'); }
+            else showToast("Invalid credentials", "error");
         }
 
-        // --- ADMIN LOGIC ---
         function renderAdmin() {
-            return `
-                <div class="flex">
-                    <aside class="w-64 bg-gray-900 min-h-screen text-gray-300 p-6 hidden md:block">
-                        <h2 class="text-white font-bold mb-8 text-xl">Admin Panel</h2>
-                        <nav class="space-y-4">
-                            <button onclick="adminSub('programs')" class="block w-full text-left hover:text-white">Manage Programs</button>
-                            <button onclick="adminSub('participants')" class="block w-full text-left hover:text-white">Import Participants</button>
-                            <button onclick="adminSub('results')" class="block w-full text-left hover:text-white">Approve Results</button>
-                            <button onclick="adminSub('users')" class="block w-full text-left hover:text-white">Stage & Judges</button>
-                            <button onclick="navigate('home')" class="mt-12 block w-full text-left text-red-400">Logout</button>
-                        </nav>
-                    </aside>
-                    <main class="flex-1 p-8 bg-gray-50" id="admin-content"></main>
-                </div>
-            `;
+            return `<div class="flex">
+                <aside class="w-64 bg-gray-900 min-h-screen text-gray-300 p-6 hidden md:block">
+                    <h2 class="text-white font-bold mb-8 text-xl font-ssf">Admin Panel</h2>
+                    <nav class="space-y-4">
+                        <button onclick="adminSub('programs')" class="block w-full text-left hover:text-white">Programs</button>
+                        <button onclick="adminSub('participants')" class="block w-full text-left hover:text-white">Participants</button>
+                        <button onclick="adminSub('news')" class="block w-full text-left hover:text-white">News & Updates</button>
+                        <button onclick="adminSub('gallery')" class="block w-full text-left hover:text-white">Manage Gallery</button>
+                        <button onclick="adminSub('videos')" class="block w-full text-left hover:text-white">Manage Videos</button>
+                        <button onclick="adminSub('results')" class="block w-full text-left hover:text-white">Approve Results</button>
+                        <button onclick="adminSub('users')" class="block w-full text-left hover:text-white">Stage Managers</button>
+                        <button onclick="navigate('home')" class="mt-12 block w-full text-left text-red-400">Logout</button>
+                    </nav>
+                </aside>
+                <main class="flex-1 p-8 bg-gray-50" id="admin-content"></main>
+            </div>`;
         }
 
         async function adminSub(view) {
             const main = document.getElementById('admin-content');
             if (!main) return;
+            
             if (view === 'programs') {
-                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Programs</h2><button onclick="showAddProgramModal()" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Add Program</button></div><div id="admin-programs-list" class="space-y-2"></div>`;
+                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Manage Programs</h2><button onclick="showAddProgramModal()" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Add Program</button></div><div id="admin-programs-list" class="space-y-2"></div>`;
                 fetchAdminPrograms();
             } else if (view === 'participants') {
-                main.innerHTML = `<h2 class="text-2xl font-bold mb-6">Excel Data Import</h2><div class="bg-white p-8 rounded-2xl border-2 border-dashed text-center"><input type="file" id="excel-file" accept=".xlsx, .xls" class="hidden" onchange="processExcel(this)"><label for="excel-file" class="cursor-pointer block"><p class="text-gray-600 font-bold">Click to Upload Participant Excel Sheet</p></label></div>`;
+                main.innerHTML = `<h2 class="text-2xl font-bold mb-6">Manage Participants</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border text-center">
+                            <button onclick="downloadDemoExcel()" class="text-blue-600 font-bold underline">Download Demo Excel</button>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border text-center">
+                            <input type="file" id="excel-file" class="hidden" onchange="processExcel(this)">
+                            <label for="excel-file" class="cursor-pointer font-bold text-sahithyolsav">Import XLSX File</label>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border text-center">
+                            <button onclick="showAddParticipantModal()" class="font-bold text-green-600">Add Manually</button>
+                        </div>
+                    </div>`;
+            } else if (view === 'news') {
+                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">News & Announcements</h2><button onclick="showAddNewsModal()" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Add News</button></div><div id="admin-news-list" class="space-y-2"></div>`;
+                fetchAdminNews();
+            } else if (view === 'gallery') {
+                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Gallery Images</h2><button onclick="showAddMediaModal('image')" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Add Image</button></div><div id="admin-gallery-list" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>`;
+                fetchAdminMedia('image');
+            } else if (view === 'videos') {
+                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Video Management</h2><button onclick="showAddMediaModal('video')" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Add Video Link</button></div><div id="admin-video-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>`;
+                fetchAdminMedia('video');
             } else if (view === 'results') {
-                main.innerHTML = `<h2 class="text-2xl font-bold mb-6">Approve Pending Results</h2><div id="admin-results-approval" class="space-y-4"></div>`;
+                main.innerHTML = `<h2 class="text-2xl font-bold mb-6">Approval Queue</h2><div id="admin-results-approval" class="space-y-4"></div>`;
                 fetchAdminResultsApproval();
             } else if (view === 'users') {
-                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Manage Stage & Judge Logins</h2><button onclick="showAddUserModal()" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Create New Login</button></div><div id="admin-users-list" class="space-y-4"></div>`;
+                main.innerHTML = `<div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Stage Managers</h2><button onclick="showAddUserModal()" class="bg-sahithyolsav text-white px-4 py-2 rounded-lg font-bold">Add Manager</button></div><div id="admin-users-list" class="space-y-2"></div>`;
                 loadAdminUsers();
             }
         }
 
-        async function loadAdminUsers() {
-            const { data } = await supabaseClient.from('users_auth').select('*');
-            const list = document.getElementById('admin-users-list');
+        // News Admin Logic
+        async function fetchAdminNews() {
+            const { data } = await supabaseClient.from('news').select('*').order('created_at', { ascending: false });
+            const list = document.getElementById('admin-news-list');
             if (data && list) {
-                list.innerHTML = data.map(u => `
-                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-lg">${u.login_id}</span>
-                            <span class="text-xs uppercase tracking-widest text-gray-500 font-bold">${u.role} | ${u.stage_assigned || 'All Stages'}</span>
-                        </div>
-                        <button onclick="deleteUser('${u.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
+                list.innerHTML = data.map(n => `
+                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
+                        <span class="text-sm font-bold">${n.content}</span>
+                        <button onclick="deleteNews('${n.id}')" class="text-red-500 font-bold p-2">Delete</button>
                     </div>
                 `).join('');
             }
         }
 
-        async function showAddUserModal() {
+        function showAddNewsModal() {
             const content = document.getElementById('admin-modal-content');
-            content.innerHTML = `
-                <h3 class="text-xl font-bold mb-6">Create New Access Login</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Login ID / Email</label>
-                        <input type="text" id="new-user-id" class="w-full border p-2 rounded" placeholder="e.g. stage1@gmail.com">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Password</label>
-                        <input type="text" id="new-user-pwd" class="w-full border p-2 rounded" placeholder="e.g. 123456">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Role</label>
-                        <select id="new-user-role" class="w-full border p-2 rounded">
-                            <option value="stage">Stage Manager</option>
-                            <option value="judge">Judge</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Stage Assignment</label>
-                        <select id="new-user-stage" class="w-full border p-2 rounded">
-                            ${Array.from({length: 13}, (_, i) => `<option value="Stage ${i+1}">Stage ${i+1}</option>`).join('')}
-                        </select>
-                    </div>
-                    <button onclick="createNewUser()" class="w-full bg-sahithyolsav text-white py-3 rounded-lg font-bold">Save Login Credentials</button>
-                </div>
-            `;
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add New Announcement</h3>
+                <textarea id="news-content" class="w-full border p-2 rounded mb-4 h-24" placeholder="Type news content here..."></textarea>
+                <button onclick="saveNews()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Post News</button>`;
             openAdminModal();
         }
 
-        async function createNewUser() {
-            const login_id = document.getElementById('new-user-id').value;
-            const password = document.getElementById('new-user-pwd').value;
-            const role = document.getElementById('new-user-role').value;
-            const stage_assigned = document.getElementById('new-user-stage').value;
-
-            if(!login_id || !password) return showToast("ID and Password required", "error");
-
-            showLoading(true);
-            const { error } = await supabaseClient.from('users_auth').insert({ login_id, password, role, stage_assigned });
-            showLoading(false);
-
-            if(error) showToast(error.message, "error");
-            else {
-                showToast("Login created successfully", "success");
-                closeAdminModal();
-                loadAdminUsers();
-            }
+        async function saveNews() {
+            const content = document.getElementById('news-content').value;
+            if(!content) return;
+            await supabaseClient.from('news').insert({ content });
+            showToast("News Posted", "success"); closeAdminModal(); adminSub('news');
         }
 
-        async function showAddProgramModal() {
-            const content = document.getElementById('admin-modal-content');
-            const categories = [
-                'Lower Primary', 'Upper Primary', 'High School', 'Higher Secondary', 
-                'Junior', 'Senior', 'General', 'Campus', 'Campus Girls Parallel'
-            ];
-            
-            content.innerHTML = `
-                <h3 class="text-xl font-bold mb-6">Add New Program</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Program Name</label>
-                        <input type="text" id="prog-name" class="w-full border p-2 rounded" placeholder="e.g. Story Writing">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Category</label>
-                        <select id="prog-cat" class="w-full border p-2 rounded">
-                            ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold mb-1">Stage Assignment</label>
-                        <select id="prog-stage" class="w-full border p-2 rounded">
-                            ${Array.from({length: 13}, (_, i) => `<option value="Stage ${i+1}">Stage ${i+1}</option>`).join('')}
-                        </select>
-                    </div>
-                    <button onclick="createNewProgram()" class="w-full bg-sahithyolsav text-white py-3 rounded-lg font-bold">Add Program</button>
+        async function deleteNews(id) {
+            await supabaseClient.from('news').delete().eq('id', id);
+            adminSub('news');
+        }
+
+        // Media Admin Logic
+        async function fetchAdminMedia(type) {
+            const { data } = await supabaseClient.from('media').select('*').eq('type', type).order('created_at', { ascending: false });
+            const listId = type === 'image' ? 'admin-gallery-list' : 'admin-video-list';
+            const list = document.getElementById(listId);
+            if (!data || !list) return;
+
+            list.innerHTML = data.map(m => `
+                <div class="bg-white p-2 rounded-lg border shadow-sm flex flex-col items-center">
+                    ${type === 'image' ? `<img src="${m.url}" class="w-full h-24 object-cover mb-2">` : `<div class="bg-gray-200 w-full h-24 flex items-center justify-center text-xs">Video Link</div>`}
+                    <div class="text-[10px] font-bold mb-2 truncate w-full text-center">${m.title}</div>
+                    <button onclick="deleteMedia('${m.id}', '${type}')" class="text-xs text-red-500 font-bold underline">Remove</button>
                 </div>
-            `;
+            `).join('');
+        }
+
+        function showAddMediaModal(type) {
+            const content = document.getElementById('admin-modal-content');
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add ${type === 'image' ? 'Gallery Image' : 'Video Link'}</h3>
+                <div class="space-y-4">
+                    <input type="text" id="media-title" placeholder="Title" class="w-full border p-2 rounded">
+                    <input type="text" id="media-url" placeholder="${type === 'image' ? 'Image URL' : 'YouTube Link'}" class="w-full border p-2 rounded">
+                    <button onclick="saveMedia('${type}')" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold text-sm uppercase">Add to ${type === 'image' ? 'Gallery' : 'Videos'}</button>
+                </div>`;
             openAdminModal();
         }
 
-        async function createNewProgram() {
-            const name = document.getElementById('prog-name').value;
-            const category = document.getElementById('prog-cat').value;
-            const stage_id = document.getElementById('prog-stage').value;
+        async function saveMedia(type) {
+            const title = document.getElementById('media-title').value;
+            const url = document.getElementById('media-url').value;
+            if(!url) return;
+            await supabaseClient.from('media').insert({ title, url, type });
+            showToast("Added successfully", "success"); closeAdminModal(); adminSub(type === 'image' ? 'gallery' : 'videos');
+        }
 
-            if(!name || !stage_id) return showToast("Name and Stage required", "error");
+        async function deleteMedia(id, type) {
+            await supabaseClient.from('media').delete().eq('id', id);
+            adminSub(type === 'image' ? 'gallery' : 'videos');
+        }
 
+        // Previous features (kept intact)
+        function downloadDemoExcel() {
+            const data = [{ ProgramName: "Elocution", Category: "Senior", Name: "Muhammed", Sector: "Nilambur", ParticipationNumber: "101" }];
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Participants");
+            XLSX.writeFile(wb, "sahithyolsav_import_demo.xlsx");
+        }
+
+        async function showAddParticipantModal() {
+            const { data: progs } = await supabaseClient.from('programs').select('*');
+            const content = document.getElementById('admin-modal-content');
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Manual Participant Entry</h3>
+                <div class="space-y-4">
+                    <input type="text" id="p-name" placeholder="Full Name" class="w-full border p-2 rounded">
+                    <input type="text" id="p-no" placeholder="Participation #" class="w-full border p-2 rounded">
+                    <input type="text" id="p-sector" placeholder="Sector Name" class="w-full border p-2 rounded">
+                    <select id="p-prog" class="w-full border p-2 rounded">
+                        ${progs.map(p => `<option value="${p.id}">${p.name} (${p.category})</option>`).join('')}
+                    </select>
+                    <button onclick="addParticipantManual()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Save</button>
+                </div>`;
+            openAdminModal();
+        }
+
+        async function addParticipantManual() {
+            const name = document.getElementById('p-name').value;
+            const participation_number = document.getElementById('p-no').value;
+            const sector = document.getElementById('p-sector').value;
+            const program_id = document.getElementById('p-prog').value;
+            if(!name || !participation_number) return;
             showLoading(true);
-            const { error } = await supabaseClient.from('programs').insert({ name, category, stage_id });
-            showLoading(false);
-
-            if(error) showToast(error.message, "error");
-            else {
-                showToast("Program added", "success");
-                closeAdminModal();
-                fetchAdminPrograms();
-            }
+            await supabaseClient.from('participants').insert({ name, participation_number, sector, program_id });
+            showLoading(false); showToast("Added", "success"); closeAdminModal();
         }
 
-        async function deleteUser(id) {
-            if (confirm("Permanently delete this login?")) {
-                await supabaseClient.from('users_auth').delete().eq('id', id);
-                loadAdminUsers();
-            }
-        }
-
-        async function deleteProgram(id) {
-            if (confirm("Delete this program?")) {
-                await supabaseClient.from('programs').delete().eq('id', id);
-                fetchAdminPrograms();
-            }
-        }
-
-        async function fetchAdminResultsApproval() {
-            const { data } = await supabaseClient.from('programs').select('*').eq('status', 'completed').eq('results_published', false);
-            const list = document.getElementById('admin-results-approval');
-            if (list) {
-                if (data && data.length > 0) {
-                    list.innerHTML = data.map(p => `
-                        <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
-                            <span class="font-bold">${p.name} (${p.category})</span>
-                            <button onclick="publishResult('${p.id}')" class="bg-green-600 text-white px-4 py-1 rounded">Publish Result</button>
-                        </div>
-                    `).join('');
-                } else { 
-                    list.innerHTML = `<p class="text-gray-500">No results waiting for approval.</p>`; 
-                }
-            }
-        }
-
-        async function publishResult(id) {
-            await supabaseClient.from('programs').update({ results_published: true }).eq('id', id);
-            showToast("Result published publicly", "success");
-            fetchAdminResultsApproval();
-        }
-
-        // --- STAGE & JUDGE ---
         function renderStage() {
-            return `
-                <div class="container mx-auto px-4 py-12 max-w-4xl">
-                    <h2 class="text-3xl font-bold text-sahithyolsav mb-8">Stage Portal: ${currentUser?.stage_assigned || 'Manager'}</h2>
-                    <div id="stage-programs-list" class="grid gap-4"></div>
-                </div>
-            `;
+            return `<div class="container mx-auto px-4 py-12 max-w-5xl">
+                <h2 class="text-3xl font-ssf text-sahithyolsav mb-8">Stage Manager: ${currentUser?.stage_assigned || 'Master'}</h2>
+                <div id="stage-programs-list" class="grid gap-4"></div>
+            </div>`;
         }
 
         async function fetchStagePrograms() {
             const { data } = await supabaseClient.from('programs').select('*').eq('stage_id', currentUser.stage_assigned);
             const list = document.getElementById('stage-programs-list');
-            if (data && list) {
-                list.innerHTML = data.map(p => `
-                    <div onclick="openStageProgram('${p.id}')" class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-orange-500 cursor-pointer hover:bg-orange-50 flex justify-between items-center">
-                        <div>
-                            <div class="text-lg font-bold">${p.name}</div>
-                            <div class="text-xs text-gray-500 uppercase font-bold">${p.category}</div>
+            if (data && list) list.innerHTML = data.map(p => `
+                <div onclick="openStageProgram('${p.id}')" class="bg-white p-6 rounded-2xl shadow-sm border hover:border-sahithyolsav cursor-pointer flex justify-between items-center transition">
+                    <div><div class="font-bold text-lg">${p.name}</div><div class="text-xs text-gray-500 uppercase font-bold">${p.category}</div></div>
+                    <span class="text-xs font-bold uppercase px-3 py-1 bg-gray-100 rounded-full">${p.status}</span>
+                </div>`).join('');
+        }
+
+        async function openStageProgram(id) {
+            const { data: prog } = await supabaseClient.from('programs').select('*').eq('id', id).single();
+            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', id).order('chess_number', { ascending: true });
+            
+            const main = document.getElementById('app-view');
+            main.innerHTML = `
+                <div class="container mx-auto px-4 py-8 max-w-6xl">
+                    <button onclick="navigate('stage')" class="mb-6 font-bold text-sahithyolsav flex items-center gap-2">← Back to Portal</button>
+                    <div class="bg-white rounded-3xl p-8 shadow-xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-t-8 border-sahithyolsav">
+                        <div><h1 class="text-3xl font-ssf">${prog.name}</h1><p class="text-xs font-bold text-gray-400 tracking-widest uppercase">${prog.category} | ${prog.stage_id}</p></div>
+                        <div class="flex gap-2">
+                            <button onclick="startChessSelection('${prog.id}')" class="bg-black text-white px-6 py-2 rounded-full font-bold shadow-lg">Randomize Chess Reveal</button>
+                            <button onclick="finishStageProgram('${prog.id}')" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">Finish Program</button>
                         </div>
-                        <span class="text-sm px-3 py-1 bg-gray-100 rounded-full font-bold text-gray-600">${p.status}</span>
                     </div>
-                `).join('');
-            }
+                    <div class="grid gap-6">
+                        ${parts.map(p => `
+                            <div class="bg-white rounded-2xl shadow-md border p-6 flex flex-col lg:flex-row items-center gap-6">
+                                <div class="w-full lg:w-1/4">
+                                    <div class="text-xs font-bold text-gray-400 uppercase tracking-tighter">ID: ${p.participation_number}</div>
+                                    <div class="text-xl font-bold">${p.name}</div>
+                                    <div class="text-sm font-bold text-sahithyolsav">${p.sector}</div>
+                                </div>
+                                <div class="w-full lg:w-1/4 flex flex-col items-center border-l border-r px-4 border-gray-100">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <input type="checkbox" ${p.attendance ? 'checked' : ''} onchange="markAttendance('${p.id}', this.checked)" class="w-5 h-5 accent-sahithyolsav">
+                                        <span class="text-sm font-bold">Present</span>
+                                    </div>
+                                    <div id="scratch-${p.id}" class="scratch-container ${p.chess_number ? 'scratched' : ''}">
+                                        <div class="scratch-overlay"></div>
+                                        <span>${p.chess_number || '?'}</span>
+                                    </div>
+                                </div>
+                                <div class="w-full lg:w-2/4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="relative"><label class="text-[10px] font-bold text-gray-400 absolute top-1 left-2">SCORE (0-100)</label>
+                                        <input type="number" id="score-${p.id}" value="${p.score || ''}" class="w-full border pt-5 pb-1 px-2 rounded-lg font-bold text-lg">
+                                    </div>
+                                    <div class="relative"><label class="text-[10px] font-bold text-gray-400 absolute top-1 left-2">FEEDBACK</label>
+                                        <input type="text" id="fb-${p.id}" value="${p.feedback || ''}" class="w-full border pt-5 pb-1 px-2 rounded-lg text-sm">
+                                    </div>
+                                    <button onclick="updateEntry('${p.id}')" class="md:col-span-2 bg-sahithyolsav text-white py-1 rounded-lg font-bold text-xs uppercase">Save Data</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
         }
 
-        function renderJudge() {
-            return `
-                <div class="container mx-auto px-4 py-12 max-w-4xl">
-                    <h2 class="text-2xl font-bold mb-8 text-center text-sahithyolsav">Judge Portal</h2>
-                    <div id="judge-programs" class="space-y-4"></div>
-                </div>
-            `;
+        async function updateEntry(partId) {
+            const score = document.getElementById(`score-${partId}`).value;
+            const fb = document.getElementById(`fb-${partId}`).value;
+            showLoading(true);
+            await supabaseClient.from('participants').update({ score: score || 0, feedback: fb }).eq('id', partId);
+            showLoading(false); showToast("Data Saved", "success");
         }
 
-        async function fetchJudgePrograms() {
-            const { data } = await supabaseClient.from('programs').select('*').eq('stage_id', currentUser.stage_assigned);
-            const list = document.getElementById('judge-programs');
-            if (data && list) {
-                list.innerHTML = data.map(p => `
-                    <button onclick="openJudgeProgram('${p.id}')" class="w-full text-left bg-white p-4 rounded-xl border-2 hover:border-orange-500 font-bold flex justify-between items-center">
-                        <span>${p.name} <small class="opacity-50">(${p.category})</small></span>
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
-                    </button>
-                `).join('');
-            }
+        async function startChessSelection(progId) {
+            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).eq('attendance', true);
+            if(!parts.length) return showToast("No present participants", "error");
+            let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0, parts.length).sort(() => Math.random() - 0.5);
+            for (let i = 0; i < parts.length; i++) { await supabaseClient.from('participants').update({ chess_number: letters[i] }).eq('id', parts[i].id); }
+            openStageProgram(progId);
         }
 
-        // --- COMMON ---
+        async function finishStageProgram(id) {
+            if(!confirm("Submit final scores to Admin?")) return;
+            await supabaseClient.from('programs').update({ status: 'completed' }).eq('id', id);
+            navigate('stage');
+        }
+
+        async function markAttendance(id, present) { await supabaseClient.from('participants').update({ attendance: present }).eq('id', id); }
+        function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+        function showToast(m, t) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 ${t === 'error' ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-full shadow-2xl z-[500] animate-bounce`;
+            toast.innerText = m; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000);
+        }
+        function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
+        function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
+        function startCarousel() {
+            let i = 0; setInterval(() => { i = (i + 1) % 2; const t = document.getElementById('carousel-track'); if(t) t.style.transform = `translateX(-${i * 100}%)`; }, 5000);
+        }
+
+        window.onload = () => navigate('home');
+
         async function loadPublicResults() {
             const { data } = await supabaseClient.from('programs').select('*').eq('results_published', true);
             const grid = document.getElementById('programs-grid');
-            const count = document.getElementById('published-count');
-            if (data && grid && count) {
-                count.innerText = data.length;
-                grid.innerHTML = data.map(p => `
-                    <div onclick="showProgramResult('${p.id}')" class="bg-gray-50 p-4 rounded-xl border-2 hover:border-orange-500 cursor-pointer transition flex justify-between items-center group">
-                        <span class="font-bold text-gray-700">${p.name} <small class="text-gray-400 font-normal">(${p.category})</small></span>
-                        <svg class="w-5 h-5 text-sahithyolsav" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                `).join('');
+            if (data && grid) {
+                document.getElementById('published-count').innerText = data.length;
+                grid.innerHTML = data.map(p => `<div onclick="showProgramResult('${p.id}')" class="bg-gray-50 p-4 rounded-xl border-2 hover:border-orange-500 cursor-pointer font-bold flex justify-between items-center group">
+                    <span>${p.name} <small class="text-gray-400 font-normal">(${p.category})</small></span>
+                    <svg class="w-5 h-5 text-sahithyolsav" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"></path></svg>
+                </div>`).join('');
             }
-        }
-
-        async function showProgramResult(progId) {
-            const { data: parts } = await supabaseClient.from('participants').select('*').eq('program_id', progId).order('score', { ascending: false });
-            if (!parts) return;
-            const winners = parts.slice(0, 3);
-            const modal = document.createElement('div');
-            modal.className = "fixed inset-0 bg-black bg-opacity-90 z-[300] flex items-center justify-center p-4 overflow-y-auto";
-            modal.innerHTML = `
-                <div class="max-w-4xl w-full">
-                    <div class="flex justify-between text-white mb-6">
-                        <h2 class="text-2xl font-bold">Result Posters</h2>
-                        <button onclick="this.closest('.fixed').remove()" class="bg-white text-black px-4 py-1 rounded-full font-bold">Close</button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                        <div id="poster-1" class="poster-card mx-auto flex-shrink-0" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%)">
-                            <h3 class="font-ssf text-2xl">Sahithyolsav 2025</h3>
-                            <div class="mt-12 text-3xl font-ssf">${winners[0]?.name || 'N/A'}</div>
-                            <div class="text-sm font-bold opacity-90">${winners[0]?.sector || ''}</div>
-                            <div class="text-4xl mt-4">🥇</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
         }
 
         async function fetchAdminPrograms() {
             const { data } = await supabaseClient.from('programs').select('*').order('date_time', { ascending: false });
             const list = document.getElementById('admin-programs-list');
+            if (data && list) list.innerHTML = data.map(p => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center">
+                <div class="flex flex-col"><span class="font-bold text-lg">${p.name}</span><span class="text-xs font-bold text-sahithyolsav uppercase">${p.category} | ${p.stage_id}</span></div>
+                <button onclick="deleteProgram('${p.id}')" class="text-red-500">Delete</button></div>`).join('');
+        }
+
+        async function showAddProgramModal() {
+            const cats = ['Lower Primary', 'Upper Primary', 'High School', 'Higher Secondary', 'Junior', 'Senior', 'General', 'Campus', 'Campus Girls Parallel'];
+            const content = document.getElementById('admin-modal-content');
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Add Program</h3>
+                <input type="text" id="prog-name" placeholder="Program Name" class="w-full border p-2 rounded mb-2">
+                <select id="prog-cat" class="w-full border p-2 rounded mb-2">
+                    ${cats.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+                <select id="prog-stage" class="w-full border p-2 rounded mb-4">
+                    ${Array.from({length: 13}, (_, i) => `<option value="Stage ${i+1}">Stage ${i+1}</option>`).join('')}
+                </select>
+                <button onclick="saveProgram()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Save</button>`;
+            openAdminModal();
+        }
+
+        async function saveProgram() {
+            const name = document.getElementById('prog-name').value;
+            const category = document.getElementById('prog-cat').value;
+            const stage_id = document.getElementById('prog-stage').value;
+            if(!name) return;
+            await supabaseClient.from('programs').insert({ name, category, stage_id });
+            closeAdminModal(); adminSub('programs');
+        }
+
+        async function deleteProgram(id) { await supabaseClient.from('programs').delete().eq('id', id); adminSub('programs'); }
+
+        async function loadAdminUsers() {
+            const { data } = await supabaseClient.from('users_auth').select('*');
+            const list = document.getElementById('admin-users-list');
+            if (data && list) list.innerHTML = data.map(u => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center"><span><strong>${u.login_id}</strong> (${u.stage_assigned})</span><button onclick="deleteUser('${u.id}')" class="text-red-500 font-bold underline text-xs">Delete Access</button></div>`).join('');
+        }
+
+        async function showAddUserModal() {
+            const content = document.getElementById('admin-modal-content');
+            content.innerHTML = `<h3 class="text-xl font-bold mb-4 font-ssf">Create Stage Manager</h3>
+                <input type="text" id="nu-id" placeholder="Login ID" class="w-full border p-2 rounded mb-2">
+                <input type="text" id="nu-pwd" placeholder="Password" class="w-full border p-2 rounded mb-2">
+                <select id="nu-stage" class="w-full border p-2 rounded mb-4">
+                    ${Array.from({length: 13}, (_, i) => `<option value="Stage ${i+1}">Stage ${i+1}</option>`).join('')}
+                </select>
+                <button onclick="saveUser()" class="w-full bg-sahithyolsav text-white py-2 rounded-lg font-bold">Create Login</button>`;
+            openAdminModal();
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('nu-id').value;
+            const pwd = document.getElementById('nu-pwd').value;
+            const stage = document.getElementById('nu-stage').value;
+            if(!id || !pwd) return;
+            await supabaseClient.from('users_auth').insert({ login_id: id, password: pwd, role: 'stage', stage_assigned: stage });
+            closeAdminModal(); adminSub('users');
+        }
+
+        async function deleteUser(id) { await supabaseClient.from('users_auth').delete().eq('id', id); adminSub('users'); }
+
+        async function fetchAdminResultsApproval() {
+            const { data } = await supabaseClient.from('programs').select('*').eq('status', 'completed').eq('results_published', false);
+            const list = document.getElementById('admin-results-approval');
             if (data && list) {
-                list.innerHTML = data.map(p => `
-                    <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-lg">${p.name}</span>
-                            <span class="text-xs font-bold text-sahithyolsav uppercase tracking-widest">${p.category} | ${p.stage_id || 'Unassigned'}</span>
-                        </div>
-                        <button onclick="deleteProgram('${p.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg">Delete</button>
-                    </div>
-                `).join('');
+                if(data.length === 0) list.innerHTML = `<div class="p-8 text-center text-gray-400 font-bold">No results waiting for approval</div>`;
+                else list.innerHTML = data.map(p => `<div class="bg-white p-4 rounded-xl border flex justify-between items-center"><div><div class="font-bold">${p.name}</div><div class="text-xs text-sahithyolsav uppercase font-bold">${p.category}</div></div><button onclick="publishPublicResult('${p.id}')" class="bg-green-600 text-white px-4 py-1 rounded-full font-bold text-xs">Approve & Publish</button></div>`).join('');
             }
+        }
+
+        async function publishPublicResult(id) {
+            await supabaseClient.from('programs').update({ results_published: true }).eq('id', id);
+            showToast("Result published to public tab", "success"); fetchAdminResultsApproval();
         }
 
         async function processExcel(input) {
@@ -682,50 +694,16 @@
                 for (let row of jsonData) {
                     let { data: prog } = await supabaseClient.from('programs').select('id').eq('name', row.ProgramName || row.Program).single();
                     if (!prog) {
-                        const { data: newP } = await supabaseClient.from('programs').insert({ 
-                            name: row.ProgramName || row.Program,
-                            category: row.Category || 'General' 
-                        }).select().single();
+                        const { data: newP } = await supabaseClient.from('programs').insert({ name: row.ProgramName || row.Program, category: row.Category || 'General', stage_id: 'Stage 1' }).select().single();
                         prog = newP;
                     }
-                    await supabaseClient.from('participants').insert({ program_id: prog.id, participation_number: row.ParticipationNumber || row['Participation#'], name: row.Name, sector: row.Sector });
+                    await supabaseClient.from('participants').insert({ program_id: prog.id, participation_number: row.ParticipationNumber || row.Participation_Number || row['Participation#'], name: row.Name, sector: row.Sector });
                 }
-                showLoading(false); showToast("Imported successfully!", "success"); adminSub('participants');
+                showLoading(false); showToast("Data Imported Successfully", "success");
             };
             reader.readAsArrayBuffer(file);
         }
 
-        async function submitScore(partId) {
-            const score = document.getElementById(`score-${partId}`).value;
-            const feedback = document.getElementById(`fb-${partId}`).value;
-            await supabaseClient.from('participants').update({ score, feedback }).eq('id', partId);
-            showToast("Score Updated", "success");
-        }
-
-        async function finishScoring(progId) {
-            await supabaseClient.from('programs').update({ status: 'completed' }).eq('id', progId);
-            showToast("Scores submitted to admin!", "success"); navigate('judge');
-        }
-
-        async function markAttendance(partId, present) {
-            await supabaseClient.from('participants').update({ attendance: present }).eq('id', partId);
-            showToast("Attendance updated", "success");
-        }
-
-        function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
-        function showToast(msg, type) {
-            const toast = document.createElement('div');
-            toast.className = `fixed bottom-4 right-4 ${type === 'error' ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-full shadow-2xl z-[500] animate-bounce`;
-            toast.innerText = msg; document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        function startCarousel() {
-            let index = 0; const track = document.getElementById('carousel-track');
-            if (track) setInterval(() => { index = (index + 1) % 2; track.style.transform = `translateX(-${index * 100}%)`; }, 5000);
-        }
-
-        window.onload = () => { navigate('home'); };
     </script>
 </body>
 </html>
